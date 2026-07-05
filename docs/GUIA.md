@@ -106,12 +106,12 @@ Chips (botões compactos) com todos os serviços. Toque em um para selecionar.
 Cards com avatar, nome e especialidade de cada barbeiro. Toque para selecionar.
 
 ```
-┌──────────────┐  ┌──────────────┐
-│     [LH]     │  │     [RA]     │
-│ Luiz Henrique│  │    Rafael    │
-│ Especialista │  │  Clássicos   │
-│  degradê     │  │              │
-└──────────────┘  └──────────────┘
+┌──────────────┐
+│     [LH]     │
+│ Luiz Henrique│
+│ Especialista │
+│  degradê     │
+└──────────────┘
 ```
 
 ---

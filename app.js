@@ -16,7 +16,6 @@ const SERVICES = [
 
 const PROS = [
   { id: "luiz",  name: "Luiz Henrique", role: "Especialista em disfarçado", initials: "LH", from: "#5cff6e", to: "#176b29" },
-  { id: "rafa",  name: "Rafael",        role: "Cortes clássicos",           initials: "RA", from: "#9dff5c", to: "#2a7a12" },
 ];
 
 /* horários base do dia (08:00 → 18:00, passo de 45min) */
