@@ -1,0 +1,6 @@
+.claude
+.gitignore
+texto.md
+.DS_Store
+.env
+.env.*

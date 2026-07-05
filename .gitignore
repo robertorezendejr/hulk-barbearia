@@ -1,0 +1,22 @@
+.claude
+
+# Vercel
+.vercel
+.vercel-token
+
+# macOS
+.DS_Store
+._*
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env / segredos
+.env
+.env.*
+
+# Docs internos
+texto.md
