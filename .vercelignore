@@ -1,6 +1,7 @@
 .claude
 .gitignore
 texto.md
+docs/
 .DS_Store
 .env
 .env.*
