@@ -328,7 +328,11 @@ ul, ol { list-style: none; }
 /* ===================== FOOTER ===================== */
 .footer { border-top: 1px solid var(--line); padding: 30px 0; background: #0b0e0b; }
 .footer__inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.footer__texts { text-align: right; }
 .footer__copy { color: var(--text-dim); font-size: .85rem; }
+.footer__dev { color: var(--text-dim); font-size: .8rem; margin-top: 4px; }
+.footer__dev a { color: var(--hulk); text-decoration: none; }
+.footer__dev a:hover { text-decoration: underline; }
 
 /* ===================== MODAL ===================== */
 .modal { position: fixed; inset: 0; z-index: 100; display: none; }
