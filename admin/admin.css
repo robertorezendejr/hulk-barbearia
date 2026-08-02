@@ -1,0 +1,50 @@
+.admin-main { padding-block: 40px 80px; display: flex; flex-direction: column; gap: 24px; }
+
+.admin-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.admin-card--narrow { max-width: 380px; margin-inline: auto; margin-top: 60px; }
+.admin-card__title { font-size: 1.25rem; margin-bottom: 18px; }
+
+.admin-form { display: flex; flex-direction: column; gap: 14px; }
+.admin-form--row { flex-direction: row; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+
+.admin-field { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; color: var(--text-dim); }
+.admin-field--grow { flex: 1 1 200px; }
+.admin-field input {
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  color: var(--text); padding: 10px 12px; font-size: 1rem; font-family: inherit;
+}
+.admin-field input:focus-visible { border-color: var(--hulk); }
+
+.admin-error { color: #ff6b6b; font-size: .88rem; }
+
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.admin-table th { text-align: left; color: var(--text-dim); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-table input[type="number"] {
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 6px 8px; font-family: inherit; width: 90px;
+}
+.admin-table input[type="time"] {
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 6px 8px; font-family: inherit; width: 120px;
+}
+.admin-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--hulk); }
+
+.admin-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.admin-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 14px; font-size: .92rem;
+}
+.admin-list .admin-list__reason { color: var(--text-dim); }
+
+.admin-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--surface-2); border: 1px solid var(--hulk); color: var(--text);
+  padding: 12px 20px; border-radius: 999px; box-shadow: var(--shadow-lg); font-size: .92rem;
+}

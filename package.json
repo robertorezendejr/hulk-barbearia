@@ -1,0 +1,27 @@
+{
+  "name": "hulk-barbearia",
+  "version": "1.0.0",
+  "description": "**Barbearia Premium em Virgem Santa, Macaé/RJ**   Site de agendamento online — degradê, navalhado, social, undercut e muito mais.   Sala de espera com mesa de sinuca. Horário marcado.",
+  "main": "app.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robertorezendejr/hulk-barbearia.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/robertorezendejr/hulk-barbearia/issues"
+  },
+  "homepage": "https://github.com/robertorezendejr/hulk-barbearia#readme",
+  "dependencies": {
+    "@libsql/client": "^0.17.4"
+  }
+}

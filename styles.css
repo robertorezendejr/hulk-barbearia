@@ -281,6 +281,7 @@ ul, ol { list-style: none; }
 .time:hover:not(:disabled) { border-color: var(--hulk); transform: translateY(-2px); }
 .time.is-selected { background: var(--hulk); border-color: var(--hulk); color: #05210b; box-shadow: var(--glow); }
 .time:disabled { opacity: .35; cursor: not-allowed; text-decoration: line-through; color: var(--text-dim); }
+.times-empty { grid-column: 1 / -1; color: var(--text-dim); padding: 10px 2px; }
 
 /* resumo */
 .summary { margin-top: 8px; padding: 22px; border-radius: var(--radius); background: linear-gradient(180deg, rgba(47,212,74,.06), var(--surface-2)); border: 1px solid var(--line); transition: opacity var(--t); }

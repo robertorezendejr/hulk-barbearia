@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin — Hulk Barbearia</title>
+  <meta name="theme-color" content="#0e110e" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body class="admin-body">
+
+  <header class="header">
+    <div class="container header__inner">
+      <span class="brand">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="22" height="22">
+            <g fill="#06210d">
+              <rect x="11" y="9" width="6" height="22" rx="2"/>
+              <rect x="23" y="9" width="6" height="22" rx="2"/>
+              <rect x="11" y="17" width="18" height="6" rx="2"/>
+            </g>
+          </svg>
+        </span>
+        <span class="brand__text">
+          <strong class="brand__title">HULK</strong>
+          <small class="brand__sub">Painel Admin</small>
+        </span>
+      </span>
+      <button id="logoutBtn" class="btn btn--ghost" hidden>Sair</button>
+    </div>
+  </header>
+
+  <main class="container admin-main">
+
+    <!-- ===== LOGIN ===== -->
+    <section id="loginView" class="admin-card admin-card--narrow">
+      <h1 class="admin-card__title">Entrar</h1>
+      <form id="loginForm" class="admin-form">
+        <label class="admin-field">
+          <span>E-mail</span>
+          <input type="email" name="email" required autocomplete="username" />
+        </label>
+        <label class="admin-field">
+          <span>Senha</span>
+          <input type="password" name="password" required autocomplete="current-password" />
+        </label>
+        <p id="loginError" class="admin-error" hidden></p>
+        <button type="submit" class="btn btn--primary btn--block">Entrar</button>
+      </form>
+    </section>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="dashboardView" hidden>
+
+      <section class="admin-card">
+        <h2 class="admin-card__title">Serviços — preço e duração</h2>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="servicesTable">
+            <thead>
+              <tr>
+                <th>Serviço</th>
+                <th>Preço (R$)</th>
+                <th>Duração (min)</th>
+                <th>Ativo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="servicesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="admin-card__title">Horário de funcionamento</h2>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="hoursTable">
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Fechado</th>
+                <th>Abre</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="hoursBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="admin-card__title">Bloquear dias específicos</h2>
+        <form id="blockForm" class="admin-form admin-form--row">
+          <label class="admin-field">
+            <span>Data</span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Motivo (opcional)</span>
+            <input type="text" name="reason" placeholder="Ex: feriado, viagem…" />
+          </label>
+          <button type="submit" class="btn btn--primary">Bloquear dia</button>
+        </form>
+        <ul id="blockedList" class="admin-list"></ul>
+      </section>
+
+    </div>
+
+    <p id="toast" class="admin-toast" hidden></p>
+  </main>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

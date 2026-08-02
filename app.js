@@ -5,31 +5,71 @@
 
 const WHATSAPP = "5522996228571";
 
-/* ---------- Dados ---------- */
-const SERVICES = [
+/* ---------- Dados (fallback caso a API não responda) ---------- */
+const DEFAULT_SERVICES = [
   { id: "corte-simples",   icon: "✂️", name: "Corte Simples",  duration: 30, price: 35 },
   { id: "corte-disfarcado",icon: "✂️", name: "Corte Disfarçado", duration: 45, price: 40 },
   { id: "barba",           icon: "🧔", name: "Barba Comum",    duration: 30, price: 25 },
   { id: "corte-barba",     icon: "🔥", name: "Corte + Barba",  duration: 60, price: 60 },
   { id: "barboterapia",    icon: "💈", name: "Barboterapia com vapor de ozônio", duration: 60, price: 80 },
 ];
+const DEFAULT_HOURS = [
+  { weekday: 0, open_time: null, close_time: null, closed: 1 },
+  { weekday: 1, open_time: "08:00", close_time: "19:00", closed: 0 },
+  { weekday: 2, open_time: "08:00", close_time: "19:00", closed: 0 },
+  { weekday: 3, open_time: "08:00", close_time: "19:00", closed: 0 },
+  { weekday: 4, open_time: "08:00", close_time: "19:00", closed: 0 },
+  { weekday: 5, open_time: "08:00", close_time: "19:00", closed: 0 },
+  { weekday: 6, open_time: "08:00", close_time: "18:00", closed: 0 },
+];
+
+let SERVICES = DEFAULT_SERVICES;
+let HOURS = DEFAULT_HOURS;
+let BLOCKED = new Set();
 
 const PROS = [
   { id: "luiz",  name: "Luiz Henrique", role: "Especialista em disfarçado", initials: "LH", from: "#5cff6e", to: "#176b29" },
 ];
 
-/* horários base do dia (08:00 → 18:00, passo de 45min) */
-function buildSlots() {
+/* carrega serviços, horários e dias bloqueados do banco */
+async function loadData() {
+  try {
+    const [services, availability] = await Promise.all([
+      fetch("/api/services").then((r) => r.json()),
+      fetch("/api/availability").then((r) => r.json()),
+    ]);
+    if (Array.isArray(services) && services.length) {
+      SERVICES = services.map((s) => ({
+        id: s.id, icon: s.icon, name: s.name, duration: s.duration_min, price: s.price,
+      }));
+    }
+    if (availability?.hours?.length) HOURS = availability.hours;
+    if (availability?.blockedDates) BLOCKED = new Set(availability.blockedDates.map((b) => b.date));
+  } catch {
+    /* mantém os valores padrão (DEFAULT_SERVICES / DEFAULT_HOURS) */
+  }
+}
+
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const hoursFor = (date) => HOURS.find((h) => h.weekday === date.getDay());
+const isDayOpen = (date) => {
+  const h = hoursFor(date);
+  return !!h && !h.closed && !BLOCKED.has(ymd(date));
+};
+
+/* gera os horários do dia a partir do abre/fecha configurado no admin (passo de 45min) */
+function buildSlots(open, close) {
+  const [oh, om] = open.split(":").map(Number);
+  const [ch, cm] = close.split(":").map(Number);
   const slots = [];
-  let h = 8, m = 0;
-  while (h < 18 || (h === 18 && m === 0)) {
+  let h = oh, m = om;
+  while (h < ch || (h === ch && m <= cm)) {
     slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     m += 45;
     if (m >= 60) { m -= 60; h += 1; }
   }
   return slots;
 }
-const SLOTS = buildSlots();
 
 /* ---------- Estado ---------- */
 const state = { service: null, pro: null, date: null, time: null };
@@ -50,18 +90,18 @@ const isPast = (d) => startOfDay(d) < startOfDay(new Date());
 const fmtFull = (d) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
 /* horários ocupados — determinístico por (profissional + data) para parecer real */
-function bookedFor(pro, date) {
+function bookedFor(pro, date, slots) {
   if (!pro || !date) return new Set();
   let seed = pro.id.length * 7 + date.getDate() * 13 + date.getMonth() * 31;
   const booked = new Set();
-  SLOTS.forEach((slot, i) => {
+  slots.forEach((slot) => {
     seed = (seed * 9301 + 49297) % 233280;
     if ((seed / 233280) < 0.32) booked.add(slot); // ~32% ocupados
   });
   // bloqueia horários já passados se a data for hoje
   if (sameDay(date, new Date())) {
     const now = new Date();
-    SLOTS.forEach((slot) => {
+    slots.forEach((slot) => {
       const [h, m] = slot.split(":").map(Number);
       if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) booked.add(slot);
     });
@@ -138,9 +178,11 @@ function renderDays() {
   const today = startOfDay(new Date());
   const days = [];
   let cursor = new Date(today);
-  while (days.length < 5) {
-    if (cursor.getDay() !== 0) days.push(new Date(cursor)); // pula domingo (fechado)
+  let guard = 0; // evita loop infinito se todos os dias estiverem fechados
+  while (days.length < 5 && guard < 60) {
+    if (isDayOpen(cursor)) days.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
+    guard += 1;
   }
 
   row.innerHTML = days.map((d, i) => {
@@ -164,8 +206,14 @@ function renderDays() {
 function renderTimes() {
   const grid = $("#timesGrid");
   if (!state.pro || !state.date) { grid.innerHTML = ""; return; }
-  const booked = bookedFor(state.pro, state.date);
-  grid.innerHTML = SLOTS.map((slot) => {
+  if (!isDayOpen(state.date)) {
+    grid.innerHTML = `<p class="times-empty">Fechado nesse dia.</p>`;
+    return;
+  }
+  const h = hoursFor(state.date);
+  const slots = buildSlots(h.open_time, h.close_time);
+  const booked = bookedFor(state.pro, state.date, slots);
+  grid.innerHTML = slots.map((slot) => {
     const off = booked.has(slot);
     return `<button class="time" data-time="${slot}" ${off ? "disabled" : ""}>${slot}</button>`;
   }).join("");
@@ -313,7 +361,7 @@ function renderCal() {
   for (let i = 0; i < firstDow; i++) html += `<span class="cal__day is-empty"></span>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d);
-    const disabled = isPast(date) || date.getDay() === 0; // sem passado, sem domingo
+    const disabled = isPast(date) || !isDayOpen(date); // sem passado, sem dia fechado/bloqueado
     const cls = [
       "cal__day",
       sameDay(date, new Date()) ? "is-today" : "",
@@ -396,7 +444,8 @@ function setupFab() {
 /* =========================================================
    INIT
    ========================================================= */
-function init() {
+async function init() {
+  await loadData();
   renderServiceCards();
   renderServiceChips();
   renderProPicker();
