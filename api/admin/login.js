@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   const { email, password } = req.body || {};
-  const ok = checkCredentials(email, password);
+  const ok = await checkCredentials(email, password);
 
   await db().execute({
     sql: `INSERT INTO login_attempts (ip, success, attempted_at) VALUES (?, ?, ?)`,

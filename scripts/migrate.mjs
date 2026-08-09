@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client";
+import { hashPassword } from "../api/_auth.js";
 
 const db = createClient({
   url: process.env.TURSO_DATABASE_URL,
@@ -63,6 +64,20 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS blocked_slots (
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  reason TEXT,
+  PRIMARY KEY (date, time)
+);
 `);
 
 // SQLite não suporta "ADD COLUMN IF NOT EXISTS" — ignora erro se a coluna já existir
@@ -70,6 +85,15 @@ try {
   await db.execute("ALTER TABLE appointments ADD COLUMN calendar_event_id TEXT");
 } catch (err) {
   if (!String(err.message).includes("duplicate column")) throw err;
+}
+
+// promove o admin das variáveis de ambiente pro banco (bootstrap do primeiro admin)
+if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+  await db.execute({
+    sql: `INSERT INTO admin_users (email, password_hash, created_at) VALUES (?, ?, ?)
+          ON CONFLICT(email) DO NOTHING`,
+    args: [process.env.ADMIN_EMAIL, hashPassword(process.env.ADMIN_PASSWORD), Date.now()],
+  });
 }
 
 const services = [

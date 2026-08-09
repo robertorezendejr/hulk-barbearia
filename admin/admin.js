@@ -45,6 +45,8 @@ function showDashboard() {
   loadServices();
   loadHours();
   loadBlockedDates();
+  loadBlockedSlots();
+  loadAdmins();
 }
 
 async function checkSession() {
@@ -240,6 +242,85 @@ $("#blockForm").addEventListener("submit", async (e) => {
     showToast("Dia bloqueado.");
   } catch {
     showToast("Não deu pra bloquear esse dia.");
+  }
+});
+
+/* ---------- Horários bloqueados ---------- */
+async function loadBlockedSlots() {
+  const slots = await api("/api/admin/blocked-slots");
+  $("#blockedSlotsList").innerHTML = slots.length
+    ? slots.map((s) => {
+        const [y, m, d] = s.date.split("-");
+        return `
+      <li data-date="${escapeHtml(s.date)}" data-time="${escapeHtml(s.time)}">
+        <span>${d}/${m}/${y} às ${escapeHtml(s.time)}${s.reason ? ` <span class="admin-list__reason">· ${escapeHtml(s.reason)}</span>` : ""}</span>
+        <button class="btn btn--ghost js-unblock-slot">Desbloquear</button>
+      </li>`;
+      }).join("")
+    : `<li><span class="admin-list__reason">Nenhum horário bloqueado.</span></li>`;
+
+  $$("#blockedSlotsList .js-unblock-slot").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const li = btn.closest("li");
+      await api("/api/admin/blocked-slots", { method: "DELETE", body: { date: li.dataset.date, time: li.dataset.time } });
+      loadBlockedSlots();
+      showToast("Horário desbloqueado.");
+    });
+  });
+}
+
+$("#blockSlotForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    await api("/api/admin/blocked-slots", {
+      method: "POST",
+      body: { date: form.get("date"), time: form.get("time"), reason: form.get("reason") },
+    });
+    e.target.reset();
+    loadBlockedSlots();
+    showToast("Horário bloqueado.");
+  } catch {
+    showToast("Não deu pra bloquear esse horário.");
+  }
+});
+
+/* ---------- Administradores ---------- */
+async function loadAdmins() {
+  const admins = await api("/api/admin/admins");
+  $("#adminsList").innerHTML = admins.map((a) => `
+    <li data-id="${a.id}">
+      <span>${escapeHtml(a.email)}</span>
+      <button class="btn btn--ghost js-del-admin" ${admins.length <= 1 ? "disabled" : ""}>Excluir</button>
+    </li>`).join("");
+
+  $$("#adminsList .js-del-admin").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.closest("li").dataset.id);
+      try {
+        await api("/api/admin/admins", { method: "DELETE", body: { id } });
+        loadAdmins();
+        showToast("Admin removido.");
+      } catch {
+        showToast("Não deu pra remover esse admin.");
+      }
+    });
+  });
+}
+
+$("#adminForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    await api("/api/admin/admins", {
+      method: "POST",
+      body: { email: form.get("email"), password: form.get("password") },
+    });
+    e.target.reset();
+    loadAdmins();
+    showToast("Admin criado.");
+  } catch (err) {
+    showToast(err.message === "email_taken" ? "Esse e-mail já é admin." : "Não deu pra criar o admin.");
   }
 });
 

@@ -9,12 +9,17 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { pro_id, date } = req.query;
     if (!pro_id || !DATE_RE.test(date || "")) return res.status(400).json({ error: "invalid_params" });
-    const r = await db().execute({
-      sql: `SELECT time FROM appointments WHERE pro_id = ? AND date = ? AND status = 'confirmed'`,
-      args: [pro_id, date],
-    });
+    const [booked, slots] = await Promise.all([
+      db().execute({
+        sql: `SELECT time FROM appointments WHERE pro_id = ? AND date = ? AND status = 'confirmed'`,
+        args: [pro_id, date],
+      }),
+      db().execute({ sql: `SELECT time FROM blocked_slots WHERE date = ?`, args: [date] }),
+    ]);
     res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ booked: r.rows.map((row) => row.time) });
+    return res.status(200).json({
+      booked: [...new Set([...booked.rows.map((row) => row.time), ...slots.rows.map((row) => row.time)])],
+    });
   }
 
   if (req.method === "POST") {
@@ -47,6 +52,12 @@ export default async function handler(req, res) {
       args: [date],
     });
     if (blocked.rows.length) return res.status(400).json({ error: "closed" });
+
+    const blockedSlot = await db().execute({
+      sql: `SELECT 1 FROM blocked_slots WHERE date = ? AND time = ?`,
+      args: [date, time],
+    });
+    if (blockedSlot.rows.length) return res.status(400).json({ error: "closed" });
 
     let appointmentId;
     try {
