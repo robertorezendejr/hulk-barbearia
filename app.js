@@ -73,11 +73,15 @@ function buildSlots(open, close) {
 
 /* ---------- Estado ---------- */
 const state = { service: null, pro: null, date: null, time: null };
+let bookingInFlight = false;
 
 /* ---------- Helpers ---------- */
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const brl = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[c]));
 
 const DOW = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const DOW_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -89,15 +93,16 @@ const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
 const isPast = (d) => startOfDay(d) < startOfDay(new Date());
 const fmtFull = (d) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
-/* horários ocupados — determinístico por (profissional + data) para parecer real */
-function bookedFor(pro, date, slots) {
+/* horários ocupados — consulta os agendamentos reais no banco */
+async function bookedFor(pro, date, slots) {
   if (!pro || !date) return new Set();
-  let seed = pro.id.length * 7 + date.getDate() * 13 + date.getMonth() * 31;
   const booked = new Set();
-  slots.forEach((slot) => {
-    seed = (seed * 9301 + 49297) % 233280;
-    if ((seed / 233280) < 0.32) booked.add(slot); // ~32% ocupados
-  });
+  try {
+    const r = await fetch(`/api/appointments?pro_id=${encodeURIComponent(pro.id)}&date=${ymd(date)}`).then((r) => r.json());
+    (r.booked || []).forEach((t) => booked.add(t));
+  } catch {
+    /* em caso de falha, apenas não bloqueia nenhum horário além dos já passados */
+  }
   // bloqueia horários já passados se a data for hoje
   if (sameDay(date, new Date())) {
     const now = new Date();
@@ -117,9 +122,9 @@ function bookedFor(pro, date, slots) {
 function renderServiceCards() {
   $("#servicesGrid").innerHTML = SERVICES.map((s) => `
     <button class="service" data-service="${s.id}" role="listitem">
-      <span class="service__icon">${s.icon}</span>
+      <span class="service__icon">${escapeHtml(s.icon)}</span>
       <span class="service__body">
-        <span class="service__name">${s.name}</span>
+        <span class="service__name">${escapeHtml(s.name)}</span>
         <span class="service__meta">
           <span>⏱ ${s.duration} min</span>
         </span>
@@ -139,7 +144,7 @@ function renderServiceCards() {
 function renderServiceChips() {
   $("#serviceChips").innerHTML = SERVICES.map((s) => `
     <button class="chip" data-chip="${s.id}">
-      ${s.icon} ${s.name} <small>· ${s.duration}min · ${brl(s.price)}</small>
+      ${escapeHtml(s.icon)} ${escapeHtml(s.name)} <small>· ${s.duration}min · ${brl(s.price)}</small>
     </button>`).join("");
 
   $$(".chip").forEach((el) =>
@@ -170,6 +175,24 @@ function renderTeam() {
       <p class="member__role">${p.role}</p>
       <p class="member__bio">Atendimento de segunda a sábado, com horário marcado.</p>
     </article>`).join("");
+}
+
+/* --- Galeria de cortes --- */
+async function renderGallery() {
+  const grid = $("#galleryGrid");
+  let photos = [];
+  try {
+    photos = await fetch("/api/gallery").then((r) => r.json());
+  } catch {
+    /* galeria fica vazia se a API não responder */
+  }
+  grid.innerHTML = photos.length
+    ? photos.map((p) => `
+      <figure class="gallery__item">
+        <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "Corte feito na Hulk Barbearia")}" loading="lazy" />
+        ${p.caption ? `<figcaption class="gallery__caption">${escapeHtml(p.caption)}</figcaption>` : ""}
+      </figure>`).join("")
+    : `<p class="gallery__empty">Em breve, fotos dos nossos cortes por aqui.</p>`;
 }
 
 /* --- Dias da semana (próximos 5 dias úteis a partir de hoje) --- */
@@ -203,7 +226,7 @@ function renderDays() {
 }
 
 /* --- Horários --- */
-function renderTimes() {
+async function renderTimes() {
   const grid = $("#timesGrid");
   if (!state.pro || !state.date) { grid.innerHTML = ""; return; }
   if (!isDayOpen(state.date)) {
@@ -212,7 +235,10 @@ function renderTimes() {
   }
   const h = hoursFor(state.date);
   const slots = buildSlots(h.open_time, h.close_time);
-  const booked = bookedFor(state.pro, state.date, slots);
+  const requestedPro = state.pro, requestedDate = state.date;
+  const booked = await bookedFor(requestedPro, requestedDate, slots);
+  // o profissional/data podem ter mudado enquanto a busca estava em andamento
+  if (state.pro !== requestedPro || state.date !== requestedDate) return;
   grid.innerHTML = slots.map((slot) => {
     const off = booked.has(slot);
     return `<button class="time" data-time="${slot}" ${off ? "disabled" : ""}>${slot}</button>`;
@@ -311,13 +337,52 @@ function hulkPunch(cb) {
   el.querySelector("span").addEventListener("animationend", () => { el.remove(); cb(); }, { once: true });
 }
 
-/* confirmação → WhatsApp */
-function confirmBooking() {
+/* confirmação → salva o agendamento no banco → WhatsApp */
+async function confirmBooking() {
   const { service, pro, date, time } = state;
-  if (!service || !pro || !date || !time) return;
+  if (!service || !pro || !date || !time || bookingInFlight) return;
+
+  const name = $("#customerName").value.trim();
+  const phone = $("#customerPhone").value.replace(/\D/g, "");
+  if (!name) { showToast("Informe seu nome."); $("#customerName").focus(); return; }
+  if (phone.length < 10) { showToast("Informe um WhatsApp válido com DDD."); $("#customerPhone").focus(); return; }
+
+  bookingInFlight = true;
+  $("#confirmBtn").disabled = true;
+  try {
+    const res = await fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: service.id,
+        pro_id: pro.id,
+        date: ymd(date),
+        time,
+        customer_name: name,
+        customer_phone: phone,
+      }),
+    });
+    if (res.status === 409) {
+      showToast("Esse horário acabou de ser reservado. Escolha outro.");
+      state.time = null;
+      renderTimes();
+      return;
+    }
+    if (!res.ok) {
+      showToast("Não deu pra confirmar o agendamento. Tente novamente.");
+      return;
+    }
+  } catch {
+    showToast("Falha de conexão. Tente novamente.");
+    return;
+  } finally {
+    bookingInFlight = false;
+    $("#confirmBtn").disabled = false;
+  }
 
   const msg =
     `*Novo agendamento — Hulk Barbearia* 💚\n\n` +
+    `👤 *Cliente:* ${name}\n` +
     `✂️ *Serviço:* ${service.name}\n` +
     `💈 *Profissional:* ${pro.name}\n` +
     `📅 *Data:* ${DOW[date.getDay()]}, ${fmtFull(date)}\n` +
@@ -325,7 +390,7 @@ function confirmBooking() {
     `💰 *Valor:* ${brl(service.price)} (${service.duration} min)\n\n` +
     `Confirma pra mim, por favor?`;
 
-  showToast("Agendamento pronto! Abrindo o WhatsApp…");
+  showToast("Agendamento confirmado! Abrindo o WhatsApp…");
   hulkPunch(() => {
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   });
@@ -450,6 +515,7 @@ async function init() {
   renderServiceChips();
   renderProPicker();
   renderTeam();
+  renderGallery();
   renderDays();
   updateSummary();
   setupNav();

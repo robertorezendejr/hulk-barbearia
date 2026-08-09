@@ -56,6 +56,42 @@
     <div id="dashboardView" hidden>
 
       <section class="admin-card">
+        <h2 class="admin-card__title">Galeria — fotos dos cortes</h2>
+        <form id="galleryForm" class="admin-form admin-form--row">
+          <label class="admin-field admin-field--grow">
+            <span>Foto (JPEG, PNG ou WEBP, até 8MB)</span>
+            <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Legenda (opcional)</span>
+            <input type="text" name="caption" placeholder="Ex: Degradê navalhado" />
+          </label>
+          <button type="submit" class="btn btn--primary">Enviar foto</button>
+        </form>
+        <div id="galleryGrid" class="gallery-grid"></div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="admin-card__title">Próximos agendamentos</h2>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="appointmentsTable">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>WhatsApp</th>
+                <th>Serviço</th>
+                <th>Valor</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="appointmentsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card">
         <h2 class="admin-card__title">Serviços — preço e duração</h2>
         <div class="admin-table-wrap">
           <table class="admin-table" id="servicesTable">

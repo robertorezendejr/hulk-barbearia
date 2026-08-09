@@ -2,7 +2,7 @@ import { db } from "../_db.js";
 import { requireAuth } from "../_auth.js";
 
 export default async function handler(req, res) {
-  if (!requireAuth(req, res)) return;
+  if (!(await requireAuth(req, res))) return;
 
   if (req.method === "GET") {
     const r = await db().execute("SELECT * FROM business_hours ORDER BY weekday");

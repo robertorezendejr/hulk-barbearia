@@ -129,6 +129,7 @@
         <a href="#servicos" class="nav__link">Serviços</a>
         <a href="#agendamento" class="nav__link">Agendamento</a>
         <a href="#profissionais" class="nav__link">Profissionais</a>
+        <a href="#galeria" class="nav__link">Galeria</a>
         <a href="#contato" class="nav__link">Contato</a>
       </nav>
 
@@ -232,6 +233,16 @@
               <li><span>Horário</span><strong id="sumTime">—</strong></li>
               <li class="summary__total"><span>Total</span><strong id="sumPrice">—</strong></li>
             </ul>
+            <div class="summary__fields">
+              <label class="summary__field">
+                <span>Seu nome</span>
+                <input type="text" id="customerName" autocomplete="name" required />
+              </label>
+              <label class="summary__field">
+                <span>WhatsApp (DDD + número)</span>
+                <input type="tel" id="customerPhone" autocomplete="tel" placeholder="22999999999" required />
+              </label>
+            </div>
             <button class="btn btn--primary btn--lg btn--block" id="confirmBtn" type="button" disabled>
               Confirmar Agendamento
             </button>
@@ -250,6 +261,18 @@
           <p class="section__desc">Equipe especializada, mão firme e atenção aos detalhes.</p>
         </header>
         <div class="team" id="teamGrid"><!-- JS --></div>
+      </div>
+    </section>
+
+    <!-- ===================== GALERIA ===================== -->
+    <section class="section section--alt" id="galeria">
+      <div class="container">
+        <header class="section__head">
+          <span class="section__tag">Galeria</span>
+          <h2 class="section__title">Cortes que já saíram daqui</h2>
+          <p class="section__desc">Alguns dos últimos trabalhos da equipe.</p>
+        </header>
+        <div class="gallery" id="galleryGrid"><!-- JS --></div>
       </div>
     </section>
 

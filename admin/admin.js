@@ -5,6 +5,10 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 const DOW = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[c]));
+
 let toastTimer;
 function showToast(text) {
   const t = $("#toast");
@@ -36,6 +40,8 @@ function showDashboard() {
   $("#loginView").hidden = true;
   $("#dashboardView").hidden = false;
   $("#logoutBtn").hidden = false;
+  loadGallery();
+  loadAppointments();
   loadServices();
   loadHours();
   loadBlockedDates();
@@ -68,12 +74,88 @@ $("#logoutBtn").addEventListener("click", async () => {
   showLogin();
 });
 
+/* ---------- Galeria ---------- */
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadGallery() {
+  const photos = await api("/api/admin/gallery");
+  $("#galleryGrid").innerHTML = photos.map((p) => `
+    <div class="gallery-item" data-id="${p.id}">
+      <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "")}" loading="lazy" />
+      ${p.caption ? `<span class="gallery-item__caption">${escapeHtml(p.caption)}</span>` : ""}
+      <button class="gallery-item__del js-del-photo" type="button" aria-label="Excluir foto">×</button>
+    </div>`).join("");
+
+  $$("#galleryGrid .js-del-photo").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.closest(".gallery-item").dataset.id);
+      await api("/api/admin/gallery", { method: "DELETE", body: { id } });
+      loadGallery();
+      showToast("Foto removida.");
+    });
+  });
+}
+
+$("#galleryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const file = form.get("image");
+  if (!file || !file.size) return;
+  try {
+    const image = await fileToDataURL(file);
+    await api("/api/admin/gallery", { method: "POST", body: { image, caption: form.get("caption") } });
+    e.target.reset();
+    loadGallery();
+    showToast("Foto enviada.");
+  } catch {
+    showToast("Não deu pra enviar a foto — confira o tamanho e o formato.");
+  }
+});
+
+/* ---------- Agendamentos ---------- */
+const brl = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+async function loadAppointments() {
+  const list = await api("/api/admin/appointments");
+  $("#appointmentsBody").innerHTML = list.length
+    ? list.map((a) => {
+        const [y, m, d] = a.date.split("-");
+        return `
+      <tr data-id="${a.id}">
+        <td>${d}/${m}/${y}</td>
+        <td>${escapeHtml(a.time)}</td>
+        <td>${escapeHtml(a.customer_name)}</td>
+        <td><a href="https://wa.me/55${a.customer_phone}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
+        <td>${escapeHtml(a.service_name)}</td>
+        <td>${brl(a.price)}</td>
+        <td><button class="btn btn--ghost js-cancel">Cancelar</button></td>
+      </tr>`;
+      }).join("")
+    : `<tr><td colspan="7">Nenhum agendamento futuro.</td></tr>`;
+
+  $$("#appointmentsBody .js-cancel").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.closest("tr").dataset.id);
+      await api("/api/admin/appointments", { method: "PUT", body: { id, status: "cancelled" } });
+      loadAppointments();
+      showToast("Agendamento cancelado.");
+    });
+  });
+}
+
 /* ---------- Serviços ---------- */
 async function loadServices() {
   const services = await api("/api/admin/services");
   $("#servicesBody").innerHTML = services.map((s) => `
     <tr data-id="${s.id}">
-      <td>${s.icon} ${s.name}</td>
+      <td>${escapeHtml(s.icon)} ${escapeHtml(s.name)}</td>
       <td><input type="number" min="0" step="0.01" class="js-price" value="${s.price}" /></td>
       <td><input type="number" min="1" step="1" class="js-duration" value="${s.duration_min}" /></td>
       <td><input type="checkbox" class="js-active" ${s.active ? "checked" : ""} /></td>
@@ -129,8 +211,8 @@ async function loadBlockedDates() {
   const dates = await api("/api/admin/blocked-dates");
   $("#blockedList").innerHTML = dates.length
     ? dates.map((d) => `
-      <li data-date="${d.date}">
-        <span>${d.date}${d.reason ? ` <span class="admin-list__reason">· ${d.reason}</span>` : ""}</span>
+      <li data-date="${escapeHtml(d.date)}">
+        <span>${escapeHtml(d.date)}${d.reason ? ` <span class="admin-list__reason">· ${escapeHtml(d.reason)}</span>` : ""}</span>
         <button class="btn btn--ghost js-unblock">Desbloquear</button>
       </li>`).join("")
     : `<li><span class="admin-list__reason">Nenhum dia bloqueado.</span></li>`;

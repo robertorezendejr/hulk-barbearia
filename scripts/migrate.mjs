@@ -27,6 +27,42 @@ CREATE TABLE IF NOT EXISTS blocked_dates (
   date TEXT PRIMARY KEY,
   reason TEXT
 );
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token TEXT PRIMARY KEY,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  success INTEGER NOT NULL,
+  attempted_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_time ON login_attempts (ip, attempted_at);
+
+CREATE TABLE IF NOT EXISTS appointments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  service_id TEXT NOT NULL REFERENCES services(id),
+  pro_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'confirmed',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_pro_date ON appointments (pro_id, date);
+-- impede dois agendamentos confirmados no mesmo horário/profissional (cancelados liberam o horário)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_slot ON appointments (pro_id, date, time) WHERE status = 'confirmed';
+
+CREATE TABLE IF NOT EXISTS gallery_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
 `);
 
 const services = [

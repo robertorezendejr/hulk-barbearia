@@ -1,11 +1,8 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { db } from "./_db.js";
 
 const COOKIE_NAME = "hulk_admin";
 const MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8h
-
-function sign(value) {
-  return createHmac("sha256", process.env.ADMIN_SECRET).update(value).digest("hex");
-}
 
 function safeEqual(a, b) {
   const bufA = Buffer.from(a);
@@ -19,35 +16,43 @@ export function checkCredentials(email, password) {
   return safeEqual(email, process.env.ADMIN_EMAIL) && safeEqual(password, process.env.ADMIN_PASSWORD);
 }
 
-// ponytail: host-based check instead of proper TLS detection — good enough since
-// Vercel always serves production over HTTPS, this only relaxes `Secure` for local dev.
+// x-forwarded-proto é setado pelo proxy da Vercel, não pelo cliente — diferente do
+// header Host, não dá pra forjar pra desligar o `Secure` em produção.
 function secureFlag(req) {
-  const host = req?.headers?.host || "";
-  return host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "" : " Secure;";
+  return req?.headers?.["x-forwarded-proto"] === "https" ? " Secure;" : "";
 }
 
-export function createSessionCookie(req) {
-  const expires = Date.now() + MAX_AGE_MS;
-  const payload = `${expires}`;
-  const token = `${payload}.${sign(payload)}`;
+export async function createSession(req) {
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + MAX_AGE_MS;
+  await db().execute({
+    sql: `INSERT INTO admin_sessions (token, expires_at) VALUES (?, ?)`,
+    args: [token, expiresAt],
+  });
   return `${COOKIE_NAME}=${token}; HttpOnly;${secureFlag(req)} SameSite=Strict; Path=/; Max-Age=${MAX_AGE_MS / 1000}`;
 }
 
-export function clearSessionCookie(req) {
+export async function destroySession(req) {
+  const token = req.cookies?.[COOKIE_NAME];
+  if (token) {
+    await db().execute({ sql: `DELETE FROM admin_sessions WHERE token = ?`, args: [token] });
+  }
   return `${COOKIE_NAME}=;${secureFlag(req)} HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
 }
 
-export function isAuthed(req) {
+export async function isAuthed(req) {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return false;
-  const [payload, sig] = token.split(".");
-  if (!payload || !sig) return false;
-  if (!safeEqual(sig, sign(payload))) return false;
-  return Number(payload) > Date.now();
+  const r = await db().execute({
+    sql: `SELECT expires_at FROM admin_sessions WHERE token = ?`,
+    args: [token],
+  });
+  const row = r.rows[0];
+  return !!row && Number(row.expires_at) > Date.now();
 }
 
-export function requireAuth(req, res) {
-  if (!isAuthed(req)) {
+export async function requireAuth(req, res) {
+  if (!(await isAuthed(req))) {
     res.status(401).json({ error: "unauthorized" });
     return false;
   }

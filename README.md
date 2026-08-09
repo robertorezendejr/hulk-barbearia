@@ -6,6 +6,27 @@ Sala de espera com mesa de sinuca. Horário marcado.
 
 ---
 
+## Como iniciar o site (desenvolvimento local)
+
+1. Crie um arquivo `.env.local` na raiz com:
+   ```
+   TURSO_DATABASE_URL=...
+   TURSO_AUTH_TOKEN=...
+   ADMIN_EMAIL=...
+   ADMIN_PASSWORD=...
+   ```
+2. Rode a migração do banco (cria as tabelas, só precisa uma vez):
+   ```bash
+   node --env-file=.env.local scripts/migrate.mjs
+   ```
+3. Suba o servidor local:
+   ```bash
+   npx vercel dev
+   ```
+4. Acesse o endereço mostrado no terminal (ex: `http://localhost:3000`). O painel admin fica em `/admin`.
+
+---
+
 ![Hero](docs/screenshots/01-hero.png)
 
 ---
