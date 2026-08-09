@@ -5,6 +5,15 @@ const PHONE_RE = /^\d{10,13}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
+const WINDOW_MS = 15 * 60 * 1000; // 15 min
+const MAX_ATTEMPTS = 8;
+
+function clientIp(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
 export default async function handler(req, res) {
   if (req.method === "GET") {
     const { pro_id, date } = req.query;
@@ -23,6 +32,20 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    const ip = clientIp(req);
+    const since = Date.now() - WINDOW_MS;
+    const recent = await db().execute({
+      sql: `SELECT COUNT(*) as n FROM booking_attempts WHERE ip = ? AND attempted_at > ?`,
+      args: [ip, since],
+    });
+    if (Number(recent.rows[0].n) >= MAX_ATTEMPTS) {
+      return res.status(429).json({ error: "too_many_attempts" });
+    }
+    await db().execute({
+      sql: `INSERT INTO booking_attempts (ip, attempted_at) VALUES (?, ?)`,
+      args: [ip, Date.now()],
+    });
+
     const { service_id, pro_id, date, time, customer_name, customer_phone } = req.body || {};
     if (!service_id || !pro_id || !DATE_RE.test(date || "") || !TIME_RE.test(time || "")) {
       return res.status(400).json({ error: "invalid_params" });

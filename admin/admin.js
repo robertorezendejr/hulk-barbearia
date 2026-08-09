@@ -44,13 +44,12 @@ function showDashboard() {
   loadAppointments();
   loadServices();
   loadHours();
-  loadBlockedDates();
-  loadBlockedSlots();
+  loadBlocked();
   loadAdmins();
 }
 
 async function checkSession() {
-  const { authed } = await fetch("/api/admin/session").then((r) => r.json());
+  const { authed } = await fetch("/api/admin/auth").then((r) => r.json());
   authed ? showDashboard() : showLogin();
 }
 
@@ -60,19 +59,21 @@ $("#loginForm").addEventListener("submit", async (e) => {
   const errEl = $("#loginError");
   errEl.hidden = true;
   try {
-    await api("/api/admin/login", {
+    await api("/api/admin/auth", {
       method: "POST",
       body: { email: form.get("email"), password: form.get("password") },
     });
     showDashboard();
-  } catch {
-    errEl.textContent = "E-mail ou senha incorretos.";
+  } catch (err) {
+    errEl.textContent = err.message === "too_many_attempts"
+      ? "Muitas tentativas erradas. Essa conta fica bloqueada por 24 horas."
+      : "E-mail ou senha incorretos.";
     errEl.hidden = false;
   }
 });
 
 $("#logoutBtn").addEventListener("click", async () => {
-  await api("/api/admin/logout", { method: "POST" });
+  await api("/api/admin/auth", { method: "DELETE" });
   showLogin();
 });
 
@@ -134,7 +135,7 @@ async function loadAppointments() {
         <td>${d}/${m}/${y}</td>
         <td>${escapeHtml(a.time)}</td>
         <td>${escapeHtml(a.customer_name)}</td>
-        <td><a href="https://wa.me/55${a.customer_phone}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
+        <td><a href="https://wa.me/55${escapeHtml(a.customer_phone)}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
         <td>${escapeHtml(a.service_name)}</td>
         <td>${brl(a.price)}</td>
         <td><button class="btn btn--ghost js-cancel">Cancelar</button></td>
@@ -208,9 +209,10 @@ async function loadHours() {
   });
 }
 
-/* ---------- Dias bloqueados ---------- */
-async function loadBlockedDates() {
-  const dates = await api("/api/admin/blocked-dates");
+/* ---------- Dias e horários bloqueados ---------- */
+async function loadBlocked() {
+  const { dates, slots } = await api("/api/admin/blocked");
+
   $("#blockedList").innerHTML = dates.length
     ? dates.map((d) => `
       <li data-date="${escapeHtml(d.date)}">
@@ -222,32 +224,12 @@ async function loadBlockedDates() {
   $$("#blockedList .js-unblock").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const date = btn.closest("li").dataset.date;
-      await api("/api/admin/blocked-dates", { method: "DELETE", body: { date } });
-      loadBlockedDates();
+      await api("/api/admin/blocked", { method: "DELETE", body: { date } });
+      loadBlocked();
       showToast("Dia desbloqueado.");
     });
   });
-}
 
-$("#blockForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const form = new FormData(e.target);
-  try {
-    await api("/api/admin/blocked-dates", {
-      method: "POST",
-      body: { date: form.get("date"), reason: form.get("reason") },
-    });
-    e.target.reset();
-    loadBlockedDates();
-    showToast("Dia bloqueado.");
-  } catch {
-    showToast("Não deu pra bloquear esse dia.");
-  }
-});
-
-/* ---------- Horários bloqueados ---------- */
-async function loadBlockedSlots() {
-  const slots = await api("/api/admin/blocked-slots");
   $("#blockedSlotsList").innerHTML = slots.length
     ? slots.map((s) => {
         const [y, m, d] = s.date.split("-");
@@ -262,23 +244,39 @@ async function loadBlockedSlots() {
   $$("#blockedSlotsList .js-unblock-slot").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const li = btn.closest("li");
-      await api("/api/admin/blocked-slots", { method: "DELETE", body: { date: li.dataset.date, time: li.dataset.time } });
-      loadBlockedSlots();
+      await api("/api/admin/blocked", { method: "DELETE", body: { date: li.dataset.date, time: li.dataset.time } });
+      loadBlocked();
       showToast("Horário desbloqueado.");
     });
   });
 }
 
+$("#blockForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    await api("/api/admin/blocked", {
+      method: "POST",
+      body: { date: form.get("date"), reason: form.get("reason") },
+    });
+    e.target.reset();
+    loadBlocked();
+    showToast("Dia bloqueado.");
+  } catch {
+    showToast("Não deu pra bloquear esse dia.");
+  }
+});
+
 $("#blockSlotForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = new FormData(e.target);
   try {
-    await api("/api/admin/blocked-slots", {
+    await api("/api/admin/blocked", {
       method: "POST",
       body: { date: form.get("date"), time: form.get("time"), reason: form.get("reason") },
     });
     e.target.reset();
-    loadBlockedSlots();
+    loadBlocked();
     showToast("Horário bloqueado.");
   } catch {
     showToast("Não deu pra bloquear esse horário.");

@@ -84,6 +84,7 @@ ul, ol { list-style: none; }
   border-bottom: 1px solid var(--line);
 }
 .header__inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.header__actions { display: flex; align-items: center; gap: 10px; }
 
 .brand { display: inline-flex; align-items: center; gap: 11px; }
 .brand__mark {

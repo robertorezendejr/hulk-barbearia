@@ -368,6 +368,10 @@ async function confirmBooking() {
       renderTimes();
       return;
     }
+    if (res.status === 429) {
+      showToast("Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.");
+      return;
+    }
     if (!res.ok) {
       showToast("Não deu pra confirmar o agendamento. Tente novamente.");
       return;

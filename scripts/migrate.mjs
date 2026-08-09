@@ -78,6 +78,13 @@ CREATE TABLE IF NOT EXISTS blocked_slots (
   reason TEXT,
   PRIMARY KEY (date, time)
 );
+
+CREATE TABLE IF NOT EXISTS booking_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  attempted_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_booking_attempts_ip_time ON booking_attempts (ip, attempted_at);
 `);
 
 // SQLite não suporta "ADD COLUMN IF NOT EXISTS" — ignora erro se a coluna já existir
@@ -86,6 +93,12 @@ try {
 } catch (err) {
   if (!String(err.message).includes("duplicate column")) throw err;
 }
+try {
+  await db.execute("ALTER TABLE login_attempts ADD COLUMN email TEXT");
+} catch (err) {
+  if (!String(err.message).includes("duplicate column")) throw err;
+}
+await db.execute("CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts (email, attempted_at)");
 
 // promove o admin das variáveis de ambiente pro banco (bootstrap do primeiro admin)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
