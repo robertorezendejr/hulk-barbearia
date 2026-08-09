@@ -1,5 +1,6 @@
 import { db } from "../_db.js";
 import { requireAuth } from "../_auth.js";
+import { deleteCalendarEvent } from "../_calendar.js";
 
 export default async function handler(req, res) {
   if (!(await requireAuth(req, res))) return;
@@ -19,10 +20,12 @@ export default async function handler(req, res) {
   if (req.method === "PUT") {
     const { id, status } = req.body || {};
     if (!id || status !== "cancelled") return res.status(400).json({ error: "invalid_params" });
+    const row = await db().execute({ sql: `SELECT calendar_event_id FROM appointments WHERE id = ?`, args: [id] });
     await db().execute({
       sql: `UPDATE appointments SET status = ? WHERE id = ?`,
       args: [status, id],
     });
+    await deleteCalendarEvent(row.rows[0]?.calendar_event_id);
     return res.status(200).json({ ok: true });
   }
 

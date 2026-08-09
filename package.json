@@ -23,6 +23,7 @@
   "homepage": "https://github.com/robertorezendejr/hulk-barbearia#readme",
   "dependencies": {
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.7.0"
+    "@vercel/blob": "^2.7.0",
+    "google-auth-library": "^11.0.0"
   }
 }

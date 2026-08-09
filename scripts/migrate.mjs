@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
 );
 `);
 
+// SQLite não suporta "ADD COLUMN IF NOT EXISTS" — ignora erro se a coluna já existir
+try {
+  await db.execute("ALTER TABLE appointments ADD COLUMN calendar_event_id TEXT");
+} catch (err) {
+  if (!String(err.message).includes("duplicate column")) throw err;
+}
+
 const services = [
   ["corte-simples", "Corte Simples", "✂️", 35, 30, 1],
   ["corte-disfarcado", "Corte Disfarçado", "✂️", 40, 45, 2],

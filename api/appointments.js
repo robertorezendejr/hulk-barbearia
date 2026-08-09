@@ -1,4 +1,5 @@
 import { db } from "./_db.js";
+import { createCalendarEvent } from "./_calendar.js";
 
 const PHONE_RE = /^\d{10,13}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
     if (!PHONE_RE.test(phone)) return res.status(400).json({ error: "invalid_phone" });
 
     const service = await db().execute({
-      sql: `SELECT id FROM services WHERE id = ? AND active = 1`,
+      sql: `SELECT id, name, duration_min FROM services WHERE id = ? AND active = 1`,
       args: [service_id],
     });
     if (!service.rows.length) return res.status(400).json({ error: "invalid_service" });
@@ -47,18 +48,36 @@ export default async function handler(req, res) {
     });
     if (blocked.rows.length) return res.status(400).json({ error: "closed" });
 
+    let appointmentId;
     try {
-      await db().execute({
+      const inserted = await db().execute({
         sql: `INSERT INTO appointments (service_id, pro_id, date, time, customer_name, customer_phone, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?)`,
         args: [service_id, pro_id, date, time, name, phone, Date.now()],
       });
+      appointmentId = inserted.lastInsertRowid;
     } catch (err) {
       if (String(err.message || "").includes("UNIQUE")) {
         return res.status(409).json({ error: "slot_taken" });
       }
       throw err;
     }
+
+    const svc = service.rows[0];
+    const eventId = await createCalendarEvent({
+      summary: `${svc.name} — ${name}`,
+      description: `Cliente: ${name}\nWhatsApp: ${phone}`,
+      date,
+      time,
+      durationMin: svc.duration_min,
+    });
+    if (eventId) {
+      await db().execute({
+        sql: `UPDATE appointments SET calendar_event_id = ? WHERE id = ?`,
+        args: [eventId, appointmentId],
+      });
+    }
+
     return res.status(201).json({ ok: true });
   }
 
