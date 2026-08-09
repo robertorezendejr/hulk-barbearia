@@ -6,6 +6,25 @@ Sala de espera com mesa de sinuca. Horário marcado.
 
 ---
 
+## Infraestrutura
+
+**Domínio**: `hulkbarbearia.com.br`, gerenciado via Cloudflare DNS (nameservers trocados no Registro.br). Aponta pro Vercel com:
+- `A hulkbarbearia.com.br → 76.76.21.21`
+- `CNAME www → cname.vercel-dns.com`
+
+Ambos configurados como **"Somente DNS"** (sem proxy) na Cloudflare.
+
+**E-mail (Resend)**: integração instalada via Vercel Marketplace, plano Free, região São Paulo (`sa-east-1`). Domínio **verificado**, com os registros DNS na Cloudflare:
+- `TXT resend._domainkey` (chave DKIM)
+- `MX send → feedback-smtp.sa-east-1.amazonses.com` (prioridade 10)
+- `TXT send → v=spf1 include:amazonses.com ~all`
+
+**Google Calendar**: integrado via service account do Google Cloud — as env vars `GOOGLE_SERVICE_ACCOUNT_KEY` e `GOOGLE_CALENDAR_ID` já estão configuradas no Vercel.
+
+**Variáveis de ambiente no Vercel** (production/preview/development): `RESEND_API_KEY`, `RESEND_EMAIL_DOMAIN`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_CALENDAR_ID`.
+
+---
+
 ## Como iniciar o site (desenvolvimento local)
 
 1. Crie um arquivo `.env.local` na raiz com:
