@@ -20,6 +20,21 @@
 }
 .admin-field input:focus-visible { border-color: var(--hulk); }
 
+.admin-field input[type="file"] {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; color: var(--text-dim); font-size: .85rem;
+}
+.admin-field input[type="file"]::file-selector-button,
+.admin-field input[type="file"]::-webkit-file-upload-button {
+  background: var(--surface); color: var(--text); border: 1.5px solid var(--line);
+  border-radius: 999px; padding: 8px 16px; margin-right: 12px;
+  font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.admin-field input[type="file"]:hover::file-selector-button,
+.admin-field input[type="file"]:hover::-webkit-file-upload-button {
+  border-color: var(--hulk); color: var(--hulk);
+}
+
 .admin-error { color: #ff6b6b; font-size: .88rem; }
 
 .admin-table-wrap { overflow-x: auto; }
