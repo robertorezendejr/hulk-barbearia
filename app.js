@@ -387,6 +387,9 @@ async function confirmBooking() {
     $("#confirmBtn").disabled = false;
   }
 
+  localStorage.setItem("customerName", name);
+  localStorage.setItem("customerPhone", $("#customerPhone").value.trim());
+
   showToast("Agendamento confirmado!");
   hulkPunch(() => {});
 }
@@ -516,6 +519,11 @@ async function init() {
   setupNav();
   setupReveal();
   setupFab();
+
+  const savedName = localStorage.getItem("customerName");
+  const savedPhone = localStorage.getItem("customerPhone");
+  if (savedName) $("#customerName").value = savedName;
+  if (savedPhone) $("#customerPhone").value = savedPhone;
 
   $("#year").textContent = new Date().getFullYear();
   $("#otherDayBtn").addEventListener("click", openCal);
