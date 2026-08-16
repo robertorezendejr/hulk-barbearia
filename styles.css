@@ -462,3 +462,20 @@ ul, ol { list-style: none; }
   45%  { transform: scale(6);   opacity: 1; }
   100% { transform: scale(0.1); opacity: 0; }
 }
+
+/* "Obrigado pelo agendamento" — some sozinho depois de 2s */
+.booking-success {
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center; gap: 10px; text-align: center;
+  padding: 24px; background: rgba(6, 10, 6, .94);
+  animation: booking-success-fade .35s ease both;
+}
+.booking-success__title {
+  font-size: clamp(1.8rem, 6vw, 3rem); font-weight: 800; color: var(--hulk-bright);
+}
+.booking-success__name {
+  font-size: clamp(1.1rem, 3.5vw, 1.5rem); color: var(--text-dim);
+}
+@keyframes booking-success-fade {
+  from { opacity: 0; } to { opacity: 1; }
+}

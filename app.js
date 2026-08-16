@@ -391,7 +391,21 @@ async function confirmBooking() {
   localStorage.setItem("customerPhone", $("#customerPhone").value.trim());
 
   showToast("Agendamento confirmado!");
-  hulkPunch(() => {});
+  hulkPunch(() => showBookingSuccess(name));
+}
+
+/* mensagem "Obrigado pelo agendamento" após o soco do Hulk → some e volta ao topo */
+function showBookingSuccess(name) {
+  const el = document.createElement("div");
+  el.className = "booking-success";
+  el.innerHTML = `
+    <p class="booking-success__title">Obrigado pelo Agendamento!</p>
+    <p class="booking-success__name">${escapeHtml(name)}</p>`;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.remove();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 2000);
 }
 
 /* =========================================================
