@@ -3,8 +3,6 @@
    ========================================================= */
 "use strict";
 
-const WHATSAPP = "5522996228571";
-
 /* ---------- Dados (fallback caso a API não responda) ---------- */
 const DEFAULT_SERVICES = [
   { id: "corte-simples",   icon: "✂️", name: "Corte Simples",  duration: 30, price: 35 },
@@ -333,7 +331,7 @@ function updateSummary() {
   $("#sumPrice").textContent   = state.service ? brl(state.service.price) : "—";
 }
 
-/* soco do Hulk antes de abrir o WhatsApp */
+/* soco do Hulk como confirmação visual */
 function hulkPunch(cb) {
   const el = document.createElement("div");
   el.className = "hulk-punch";
@@ -342,7 +340,7 @@ function hulkPunch(cb) {
   el.querySelector("span").addEventListener("animationend", () => { el.remove(); cb(); }, { once: true });
 }
 
-/* confirmação → salva o agendamento no banco → WhatsApp */
+/* confirmação → salva o agendamento no banco (e no Google Calendar) */
 async function confirmBooking() {
   const { service, pro, date, time } = state;
   if (!service || !pro || !date || !time || bookingInFlight) return;
@@ -389,20 +387,8 @@ async function confirmBooking() {
     $("#confirmBtn").disabled = false;
   }
 
-  const msg =
-    `*Novo agendamento — Hulk Barbearia* 💚\n\n` +
-    `👤 *Cliente:* ${name}\n` +
-    `✂️ *Serviço:* ${service.name}\n` +
-    `💈 *Profissional:* ${pro.name}\n` +
-    `📅 *Data:* ${DOW[date.getDay()]}, ${fmtFull(date)}\n` +
-    `🕐 *Horário:* ${time}\n` +
-    `💰 *Valor:* ${brl(service.price)} (${service.duration} min)\n\n` +
-    `Confirma pra mim, por favor?`;
-
-  showToast("Agendamento confirmado! Abrindo o WhatsApp…");
-  hulkPunch(() => {
-    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
-  });
+  showToast("Agendamento confirmado!");
+  hulkPunch(() => {});
 }
 
 /* =========================================================

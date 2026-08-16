@@ -63,7 +63,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "invalid_params" });
     }
     const name = String(customer_name || "").trim();
-    const phone = String(customer_phone || "").replace(/\D/g, "");
+    let phone = String(customer_phone || "").replace(/\D/g, "");
+    if (phone.length >= 12) phone = phone.slice(-11); // remove o "55" se o cliente digitou com DDI
     if (!name) return res.status(400).json({ error: "invalid_name" });
     if (!PHONE_RE.test(phone)) return res.status(400).json({ error: "invalid_phone" });
     if (!VALID_PRO_IDS.has(pro_id)) return res.status(400).json({ error: "invalid_pro" });

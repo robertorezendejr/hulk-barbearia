@@ -124,6 +124,8 @@ $("#galleryForm").addEventListener("submit", async (e) => {
 
 /* ---------- Agendamentos ---------- */
 const brl = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+// telefone já pode vir com ou sem o "55" (depende do que o cliente digitou) — 10-11 dígitos = sem DDI, 12-13 = já tem
+const waNumber = (phone) => (phone.length >= 12 ? phone : `55${phone}`);
 
 async function loadAppointments() {
   const list = await api("/api/admin/appointments");
@@ -135,7 +137,7 @@ async function loadAppointments() {
         <td>${d}/${m}/${y}</td>
         <td>${escapeHtml(a.time)}</td>
         <td>${escapeHtml(a.customer_name)}</td>
-        <td><a href="https://wa.me/55${escapeHtml(a.customer_phone)}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
+        <td><a href="https://wa.me/${waNumber(a.customer_phone)}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
         <td>${escapeHtml(a.service_name)}</td>
         <td>${brl(a.price)}</td>
         <td><button class="btn btn--ghost js-cancel">Cancelar</button></td>
