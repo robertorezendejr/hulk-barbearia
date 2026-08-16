@@ -8,6 +8,12 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 const WINDOW_MS = 15 * 60 * 1000; // 15 min
 const MAX_ATTEMPTS = 8;
 
+// mesma lista de profissionais válidos usada no front (app.js -> PROS)
+const VALID_PRO_IDS = new Set(["luiz"]);
+
+const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && bStart < aEnd;
+
 function clientIp(req) {
   const fwd = req.headers["x-forwarded-for"];
   if (fwd) return fwd.split(",")[0].trim();
@@ -18,16 +24,22 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { pro_id, date } = req.query;
     if (!pro_id || !DATE_RE.test(date || "")) return res.status(400).json({ error: "invalid_params" });
-    const [booked, slots] = await Promise.all([
+    const [appts, slots] = await Promise.all([
       db().execute({
-        sql: `SELECT time FROM appointments WHERE pro_id = ? AND date = ? AND status = 'confirmed'`,
+        sql: `SELECT a.time, s.duration_min FROM appointments a
+              JOIN services s ON s.id = a.service_id
+              WHERE a.pro_id = ? AND a.date = ? AND a.status = 'confirmed'`,
         args: [pro_id, date],
       }),
       db().execute({ sql: `SELECT time FROM blocked_slots WHERE date = ?`, args: [date] }),
     ]);
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({
-      booked: [...new Set([...booked.rows.map((row) => row.time), ...slots.rows.map((row) => row.time)])],
+      // intervalos ocupados (não só o horário de início) para o front detectar sobreposição
+      busy: [
+        ...appts.rows.map((r) => ({ time: r.time, duration: r.duration_min })),
+        ...slots.rows.map((r) => ({ time: r.time, duration: 1 })),
+      ],
     });
   }
 
@@ -54,12 +66,16 @@ export default async function handler(req, res) {
     const phone = String(customer_phone || "").replace(/\D/g, "");
     if (!name) return res.status(400).json({ error: "invalid_name" });
     if (!PHONE_RE.test(phone)) return res.status(400).json({ error: "invalid_phone" });
+    if (!VALID_PRO_IDS.has(pro_id)) return res.status(400).json({ error: "invalid_pro" });
 
     const service = await db().execute({
       sql: `SELECT id, name, duration_min FROM services WHERE id = ? AND active = 1`,
       args: [service_id],
     });
     if (!service.rows.length) return res.status(400).json({ error: "invalid_service" });
+    const svc = service.rows[0];
+    const startMin = toMin(time);
+    const endMin = startMin + svc.duration_min;
 
     const weekday = new Date(`${date}T12:00:00`).getDay();
     const hours = await db().execute({
@@ -67,7 +83,7 @@ export default async function handler(req, res) {
       args: [weekday],
     });
     const h = hours.rows[0];
-    if (!h || h.closed || time < h.open_time || time > h.close_time) {
+    if (!h || h.closed || startMin < toMin(h.open_time) || endMin > toMin(h.close_time)) {
       return res.status(400).json({ error: "closed" });
     }
     const blocked = await db().execute({
@@ -76,11 +92,28 @@ export default async function handler(req, res) {
     });
     if (blocked.rows.length) return res.status(400).json({ error: "closed" });
 
-    const blockedSlot = await db().execute({
-      sql: `SELECT 1 FROM blocked_slots WHERE date = ? AND time = ?`,
-      args: [date, time],
+    const blockedSlots = await db().execute({
+      sql: `SELECT time FROM blocked_slots WHERE date = ?`,
+      args: [date],
     });
-    if (blockedSlot.rows.length) return res.status(400).json({ error: "closed" });
+    const hitsBlockedSlot = blockedSlots.rows.some((r) => {
+      const t = toMin(r.time);
+      return startMin <= t && t < endMin;
+    });
+    if (hitsBlockedSlot) return res.status(400).json({ error: "closed" });
+
+    // checa sobreposição real de intervalo (não só o horário de início) com agendamentos confirmados
+    const existing = await db().execute({
+      sql: `SELECT a.time, s.duration_min FROM appointments a
+            JOIN services s ON s.id = a.service_id
+            WHERE a.pro_id = ? AND a.date = ? AND a.status = 'confirmed'`,
+      args: [pro_id, date],
+    });
+    const hasOverlap = existing.rows.some((r) => {
+      const bStart = toMin(r.time);
+      return overlaps(startMin, endMin, bStart, bStart + r.duration_min);
+    });
+    if (hasOverlap) return res.status(409).json({ error: "slot_taken" });
 
     let appointmentId;
     try {
@@ -97,7 +130,6 @@ export default async function handler(req, res) {
       throw err;
     }
 
-    const svc = service.rows[0];
     const eventId = await createCalendarEvent({
       summary: `${svc.name} — ${name}`,
       description: `Cliente: ${name}\nWhatsApp: ${phone}`,

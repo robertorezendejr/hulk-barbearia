@@ -57,7 +57,7 @@ const isDayOpen = (date) => {
   return !!h && !h.closed && !BLOCKED.has(ymd(date));
 };
 
-/* gera os horários do dia a partir do abre/fecha configurado no admin (passo de 45min) */
+/* gera os horários do dia a partir do abre/fecha configurado no admin (passo de 15min) */
 function buildSlots(open, close) {
   const [oh, om] = open.split(":").map(Number);
   const [ch, cm] = close.split(":").map(Number);
@@ -65,11 +65,15 @@ function buildSlots(open, close) {
   let h = oh, m = om;
   while (h < ch || (h === ch && m <= cm)) {
     slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    m += 45;
+    m += 15;
     if (m >= 60) { m -= 60; h += 1; }
   }
   return slots;
 }
+
+/* "HH:MM" -> minutos desde meia-noite */
+const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const intervalsOverlap = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && bStart < aEnd;
 
 /* ---------- Estado ---------- */
 const state = { service: null, pro: null, date: null, time: null };
@@ -93,25 +97,16 @@ const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
 const isPast = (d) => startOfDay(d) < startOfDay(new Date());
 const fmtFull = (d) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
-/* horários ocupados — consulta os agendamentos reais no banco */
-async function bookedFor(pro, date, slots) {
-  if (!pro || !date) return new Set();
-  const booked = new Set();
+/* horários ocupados — consulta os agendamentos reais no banco (intervalos com duração) */
+async function busyFor(pro, date) {
+  if (!pro || !date) return [];
   try {
     const r = await fetch(`/api/appointments?pro_id=${encodeURIComponent(pro.id)}&date=${ymd(date)}`).then((r) => r.json());
-    (r.booked || []).forEach((t) => booked.add(t));
+    return r.busy || [];
   } catch {
     /* em caso de falha, apenas não bloqueia nenhum horário além dos já passados */
+    return [];
   }
-  // bloqueia horários já passados se a data for hoje
-  if (sameDay(date, new Date())) {
-    const now = new Date();
-    slots.forEach((slot) => {
-      const [h, m] = slot.split(":").map(Number);
-      if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) booked.add(slot);
-    });
-  }
-  return booked;
 }
 
 /* =========================================================
@@ -228,7 +223,7 @@ function renderDays() {
 /* --- Horários --- */
 async function renderTimes() {
   const grid = $("#timesGrid");
-  if (!state.pro || !state.date) { grid.innerHTML = ""; return; }
+  if (!state.pro || !state.date || !state.service) { grid.innerHTML = ""; return; }
   if (!isDayOpen(state.date)) {
     grid.innerHTML = `<p class="times-empty">Fechado nesse dia.</p>`;
     return;
@@ -236,11 +231,21 @@ async function renderTimes() {
   const h = hoursFor(state.date);
   const slots = buildSlots(h.open_time, h.close_time);
   const requestedPro = state.pro, requestedDate = state.date;
-  const booked = await bookedFor(requestedPro, requestedDate, slots);
+  const busy = await busyFor(requestedPro, requestedDate);
   // o profissional/data podem ter mudado enquanto a busca estava em andamento
   if (state.pro !== requestedPro || state.date !== requestedDate) return;
+
+  const duration = state.service.duration;
+  const closeMin = toMin(h.close_time);
+  const isToday = sameDay(state.date, new Date());
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
   grid.innerHTML = slots.map((slot) => {
-    const off = booked.has(slot);
+    const startMin = toMin(slot);
+    const endMin = startMin + duration;
+    let off = endMin > closeMin; // o serviço não cabe antes de fechar
+    if (!off) off = busy.some((b) => intervalsOverlap(startMin, endMin, toMin(b.time), toMin(b.time) + b.duration));
+    if (!off && isToday && startMin <= nowMin) off = true; // horário já passou
     return `<button class="time" data-time="${slot}" ${off ? "disabled" : ""}>${slot}</button>`;
   }).join("");
 
