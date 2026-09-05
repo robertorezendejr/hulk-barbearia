@@ -122,30 +122,12 @@ async function loadGallery() {
   });
 }
 
-const galleryTypeSelect = $("#galleryTypeSelect");
-const galleryFileField = $("#galleryFileField");
-const galleryFileInput = galleryFileField.querySelector("input");
-const galleryLinkField = $("#galleryLinkField");
-const galleryLinkInput = galleryLinkField.querySelector("input");
-
-galleryTypeSelect.addEventListener("change", () => {
-  const type = galleryTypeSelect.value;
-  const isLink = type === "instagram";
-  galleryFileField.hidden = isLink;
-  galleryLinkField.hidden = !isLink;
-  galleryFileInput.required = !isLink;
-  galleryLinkInput.required = isLink;
-  galleryFileInput.accept = type === "video" ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png,image/webp";
-  $("#galleryFileLabel").textContent = type === "video"
-    ? "Vídeo (MP4, WEBM ou MOV, até 40MB)"
-    : "Foto (JPEG, PNG ou WEBP, até 8MB)";
-});
-
 $("#galleryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = new FormData(e.target);
-  const type = form.get("type");
   const caption = form.get("caption");
+  const instagramUrl = form.get("instagram_url");
+  const file = form.get("file");
   const submitBtn = e.target.querySelector("button[type=submit]");
   const progress = $("#galleryProgress");
   submitBtn.disabled = true;
@@ -156,16 +138,16 @@ $("#galleryForm").addEventListener("submit", async (e) => {
   const tick = setInterval(() => { if (progress.value < 90) progress.value += 4; }, 200);
   try {
     const body = { caption };
-    if (type === "instagram") {
-      body.instagram_url = form.get("instagram_url");
+    if (instagramUrl) {
+      body.instagram_url = instagramUrl;
+    } else if (file && file.size) {
+      body[file.type.startsWith("video/") ? "video" : "image"] = await fileToDataURL(file);
     } else {
-      const file = form.get("file");
-      if (!file || !file.size) return;
-      body[type === "video" ? "video" : "image"] = await fileToDataURL(file);
+      showToast("Escolha um arquivo ou cole um link do Instagram.");
+      return;
     }
     await api("/api/admin/gallery", { method: "POST", body });
     e.target.reset();
-    galleryTypeSelect.dispatchEvent(new Event("change"));
     await loadGallery();
     progress.value = 100;
     showToast("Adicionado à galeria.");
