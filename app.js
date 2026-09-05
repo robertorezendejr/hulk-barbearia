@@ -180,11 +180,15 @@ async function renderGallery() {
     /* galeria fica vazia se a API não responder */
   }
   grid.innerHTML = photos.length
-    ? photos.map((p) => `
-      <figure class="gallery__item">
-        <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "Corte feito na Hulk Barbearia")}" loading="lazy" />
-        ${p.caption ? `<figcaption class="gallery__caption">${escapeHtml(p.caption)}</figcaption>` : ""}
-      </figure>`).join("")
+    ? photos.map((p) => {
+        const caption = p.caption ? `<figcaption class="gallery__caption">${escapeHtml(p.caption)}</figcaption>` : "";
+        const media = p.type === "video"
+          ? `<video src="${escapeHtml(p.url)}" controls preload="metadata"></video>`
+          : p.type === "instagram"
+          ? `<iframe class="gallery__embed" src="${escapeHtml(p.url)}" loading="lazy" allow="encrypted-media" allowtransparency="true"></iframe>`
+          : `<img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "Corte feito na Hulk Barbearia")}" loading="lazy" />`;
+        return `<figure class="gallery__item">${media}${caption}</figure>`;
+      }).join("")
     : `<p class="gallery__empty">Em breve, fotos dos nossos cortes por aqui.</p>`;
 }
 

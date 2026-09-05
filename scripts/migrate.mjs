@@ -128,6 +128,13 @@ try {
 }
 await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_gallery_instagram_media ON gallery_photos (instagram_media_id)");
 
+// distingue foto / vídeo enviado / vídeo do Instagram incorporado na galeria
+try {
+  await db.execute("ALTER TABLE gallery_photos ADD COLUMN type TEXT NOT NULL DEFAULT 'photo'");
+} catch (err) {
+  if (!String(err.message).includes("duplicate column")) throw err;
+}
+
 // promove o admin das variáveis de ambiente pro banco (bootstrap do primeiro admin)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
   await db.execute({

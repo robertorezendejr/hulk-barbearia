@@ -69,15 +69,27 @@
       <section class="admin-card">
         <h2 class="admin-card__title">Galeria — fotos dos cortes</h2>
         <form id="galleryForm" class="admin-form admin-form--row">
-          <label class="admin-field admin-field--grow">
-            <span>Foto (JPEG, PNG ou WEBP, até 8MB)</span>
-            <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required />
+          <label class="admin-field">
+            <span>Tipo</span>
+            <select name="type" id="galleryTypeSelect">
+              <option value="photo">Foto</option>
+              <option value="video">Vídeo (upload)</option>
+              <option value="instagram">Vídeo do Instagram (link)</option>
+            </select>
+          </label>
+          <label class="admin-field admin-field--grow" id="galleryFileField">
+            <span id="galleryFileLabel">Foto (JPEG, PNG ou WEBP, até 8MB)</span>
+            <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required />
+          </label>
+          <label class="admin-field admin-field--grow" id="galleryLinkField" hidden>
+            <span>Link do post/reel do Instagram</span>
+            <input type="url" name="instagram_url" placeholder="https://www.instagram.com/reel/..." />
           </label>
           <label class="admin-field admin-field--grow">
             <span>Legenda (opcional)</span>
             <input type="text" name="caption" placeholder="Ex: Degradê navalhado" />
           </label>
-          <button type="submit" class="btn btn--primary">Enviar foto</button>
+          <button type="submit" class="btn btn--primary">Adicionar</button>
         </form>
         <div id="galleryGrid" class="gallery-grid"></div>
       </section>

@@ -90,36 +90,70 @@ function fileToDataURL(file) {
 
 async function loadGallery() {
   const photos = await api("/api/admin/gallery");
-  $("#galleryGrid").innerHTML = photos.map((p) => `
+  $("#galleryGrid").innerHTML = photos.map((p) => {
+    const media = p.type === "video"
+      ? `<video src="${escapeHtml(p.url)}" controls preload="metadata"></video>`
+      : p.type === "instagram"
+      ? `<iframe src="${escapeHtml(p.url)}" loading="lazy" allow="encrypted-media" allowtransparency="true"></iframe>`
+      : `<img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "")}" loading="lazy" />`;
+    return `
     <div class="gallery-item" data-id="${p.id}">
-      <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "")}" loading="lazy" />
+      ${media}
       ${p.caption ? `<span class="gallery-item__caption">${escapeHtml(p.caption)}</span>` : ""}
-      <button class="gallery-item__del js-del-photo" type="button" aria-label="Excluir foto">×</button>
-    </div>`).join("");
+      <button class="gallery-item__del js-del-photo" type="button" aria-label="Excluir">×</button>
+    </div>`;
+  }).join("");
 
   $$("#galleryGrid .js-del-photo").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.closest(".gallery-item").dataset.id);
       await api("/api/admin/gallery", { method: "DELETE", body: { id } });
       loadGallery();
-      showToast("Foto removida.");
+      showToast("Removido da galeria.");
     });
   });
 }
 
+const galleryTypeSelect = $("#galleryTypeSelect");
+const galleryFileField = $("#galleryFileField");
+const galleryFileInput = galleryFileField.querySelector("input");
+const galleryLinkField = $("#galleryLinkField");
+const galleryLinkInput = galleryLinkField.querySelector("input");
+
+galleryTypeSelect.addEventListener("change", () => {
+  const type = galleryTypeSelect.value;
+  const isLink = type === "instagram";
+  galleryFileField.hidden = isLink;
+  galleryLinkField.hidden = !isLink;
+  galleryFileInput.required = !isLink;
+  galleryLinkInput.required = isLink;
+  galleryFileInput.accept = type === "video" ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png,image/webp";
+  $("#galleryFileLabel").textContent = type === "video"
+    ? "Vídeo (MP4, WEBM ou MOV, até 40MB)"
+    : "Foto (JPEG, PNG ou WEBP, até 8MB)";
+});
+
 $("#galleryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = new FormData(e.target);
-  const file = form.get("image");
-  if (!file || !file.size) return;
+  const type = form.get("type");
+  const caption = form.get("caption");
   try {
-    const image = await fileToDataURL(file);
-    await api("/api/admin/gallery", { method: "POST", body: { image, caption: form.get("caption") } });
+    const body = { caption };
+    if (type === "instagram") {
+      body.instagram_url = form.get("instagram_url");
+    } else {
+      const file = form.get("file");
+      if (!file || !file.size) return;
+      body[type === "video" ? "video" : "image"] = await fileToDataURL(file);
+    }
+    await api("/api/admin/gallery", { method: "POST", body });
     e.target.reset();
+    galleryTypeSelect.dispatchEvent(new Event("change"));
     loadGallery();
-    showToast("Foto enviada.");
+    showToast("Adicionado à galeria.");
   } catch {
-    showToast("Não deu pra enviar a foto — confira o tamanho e o formato.");
+    showToast("Não deu pra enviar — confira o arquivo/link.");
   }
 });
 

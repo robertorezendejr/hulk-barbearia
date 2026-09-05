@@ -385,7 +385,9 @@ ul, ol { list-style: none; }
   background: var(--surface); transition: transform var(--t), border-color var(--t), box-shadow var(--t);
 }
 .gallery__item:hover { transform: translateY(-4px); border-color: rgba(47,212,74,.4); box-shadow: var(--shadow-lg); }
-.gallery__item img { width: 100%; height: auto; display: block; } /* altura natural de cada foto — dá o ritmo do Pinterest */
+.gallery__item img, .gallery__item video { width: 100%; height: auto; display: block; } /* altura natural — dá o ritmo do Pinterest */
+/* ponytail: iframe do Instagram não avisa a própria altura, então fixamos uma proporção em vez de ajuste dinâmico */
+.gallery__embed { width: 100%; aspect-ratio: 4 / 5; border: 0; display: block; }
 .gallery__caption {
   position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(0deg, rgba(0,0,0,.75), transparent);
   color: var(--white); font-size: .86rem; padding: 22px 14px 10px;
