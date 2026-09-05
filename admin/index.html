@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <script src="/theme.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Admin — Hulk Barbearia</title>
@@ -30,6 +31,10 @@
         </span>
       </span>
       <span class="header__actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ativar modo claro" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <a href="/" class="btn btn--ghost">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Site
@@ -95,6 +100,58 @@
             <tbody id="appointmentsBody"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="admin-card__title">Clientes fixos — horário reservado toda semana</h2>
+        <form id="recurringForm" class="admin-form admin-form--row">
+          <label class="admin-field">
+            <span>Dia da semana</span>
+            <select name="weekday" required>
+              <option value="0">Domingo</option>
+              <option value="1">Segunda</option>
+              <option value="2">Terça</option>
+              <option value="3">Quarta</option>
+              <option value="4">Quinta</option>
+              <option value="5" selected>Sexta</option>
+              <option value="6">Sábado</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Horário</span>
+            <input type="time" name="time" required />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Serviço</span>
+            <select name="service_id" id="recurringServiceSelect" required></select>
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Cliente</span>
+            <input type="text" name="customer_name" required />
+          </label>
+          <label class="admin-field">
+            <span>WhatsApp</span>
+            <input type="tel" name="customer_phone" required placeholder="22999999999" />
+          </label>
+          <button type="submit" class="btn btn--primary">Adicionar cliente fixo</button>
+        </form>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="recurringTable">
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>WhatsApp</th>
+                <th>Serviço</th>
+                <th>Desmarcar data</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="recurringBody"></tbody>
+          </table>
+        </div>
+        <ul id="recurringExceptionsList" class="admin-list"></ul>
       </section>
 
       <section class="admin-card">

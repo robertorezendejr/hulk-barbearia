@@ -490,6 +490,20 @@ function setupNav() {
   }));
 }
 
+function setupTheme() {
+  const btn = $("#themeToggle");
+  if (!btn) return;
+  const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
+  btn.setAttribute("aria-pressed", String(isLight()));
+  btn.addEventListener("click", () => {
+    const light = !isLight();
+    if (light) document.documentElement.setAttribute("data-theme", "light");
+    else document.documentElement.removeAttribute("data-theme");
+    btn.setAttribute("aria-pressed", String(light));
+    try { localStorage.setItem("hulk-theme", light ? "light" : "dark"); } catch {}
+  });
+}
+
 function setupReveal() {
   const els = $$(".section, .booking, .member, .service, .amenity");
   els.forEach((el) => el.classList.add("reveal"));
@@ -531,6 +545,7 @@ async function init() {
   renderDays();
   updateSummary();
   setupNav();
+  setupTheme();
   setupReveal();
   setupFab();
 

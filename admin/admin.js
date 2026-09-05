@@ -42,6 +42,7 @@ function showDashboard() {
   $("#logoutBtn").hidden = false;
   loadGallery();
   loadAppointments();
+  loadRecurring();
   loadServices();
   loadHours();
   loadBlocked();
@@ -154,6 +155,128 @@ async function loadAppointments() {
     });
   });
 }
+
+/* ---------- Clientes fixos ---------- */
+async function loadRecurring() {
+  const [{ recurring, exceptions }, services] = await Promise.all([
+    api("/api/admin/recurring"),
+    api("/api/admin/services"),
+  ]);
+
+  const select = $("#recurringServiceSelect");
+  select.innerHTML = services
+    .filter((s) => s.active)
+    .map((s) => `<option value="${s.id}">${escapeHtml(s.icon)} ${escapeHtml(s.name)}</option>`)
+    .join("");
+
+  const serviceOptions = (activeServices, selectedId) => activeServices
+    .map((s) => `<option value="${s.id}" ${s.id === selectedId ? "selected" : ""}>${escapeHtml(s.icon)} ${escapeHtml(s.name)}</option>`)
+    .join("");
+  const activeServices = services.filter((s) => s.active);
+
+  $("#recurringBody").innerHTML = recurring.length
+    ? recurring.map((r) => `
+      <tr data-id="${r.id}">
+        <td>${DOW[r.weekday]}</td>
+        <td>${escapeHtml(r.time)}</td>
+        <td><input type="text" class="js-edit-name" value="${escapeHtml(r.customer_name)}" /></td>
+        <td><input type="tel" class="js-edit-phone" value="${escapeHtml(r.customer_phone)}" /></td>
+        <td><select class="js-edit-service">${serviceOptions(activeServices, r.service_id)}</select></td>
+        <td><input type="date" class="js-except-date" /></td>
+        <td>
+          <button class="btn btn--ghost js-save" type="button">Salvar</button>
+          <button class="btn btn--ghost js-except" type="button">Desmarcar</button>
+          <button class="btn btn--ghost js-remove" type="button">Remover</button>
+        </td>
+      </tr>`).join("")
+    : `<tr><td colspan="7">Nenhum cliente fixo cadastrado.</td></tr>`;
+
+  $$("#recurringBody .js-save").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      const id = Number(row.dataset.id);
+      const customer_name = row.querySelector(".js-edit-name").value;
+      const customer_phone = row.querySelector(".js-edit-phone").value;
+      const service_id = row.querySelector(".js-edit-service").value;
+      try {
+        await api("/api/admin/recurring", { method: "PUT", body: { id, customer_name, customer_phone, service_id } });
+        loadRecurring();
+        showToast("Cliente fixo atualizado.");
+      } catch {
+        showToast("Não deu pra salvar — confira os dados.");
+      }
+    });
+  });
+
+  $$("#recurringBody .js-except").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      const date = row.querySelector(".js-except-date").value;
+      if (!date) return showToast("Escolha a data que o cliente vai faltar.");
+      const id = Number(row.dataset.id);
+      await api("/api/admin/recurring", { method: "PUT", body: { id, date, cancel: true } });
+      loadRecurring();
+      showToast("Horário desmarcado nessa data.");
+    });
+  });
+
+  $$("#recurringBody .js-remove").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.closest("tr").dataset.id);
+      await api("/api/admin/recurring", { method: "DELETE", body: { id } });
+      loadRecurring();
+      showToast("Cliente fixo removido.");
+    });
+  });
+
+  const byId = new Map(recurring.map((r) => [r.id, r]));
+  $("#recurringExceptionsList").innerHTML = exceptions.length
+    ? exceptions.map((e) => {
+        const r = byId.get(e.recurring_id);
+        const [y, m, d] = e.date.split("-");
+        return `
+      <li data-id="${e.recurring_id}" data-date="${escapeHtml(e.date)}">
+        <span>${d}/${m}/${y} — ${r ? escapeHtml(r.customer_name) : "cliente fixo removido"} não vem</span>
+        <button class="btn btn--ghost js-undo-except">Desfazer</button>
+      </li>`;
+      }).join("")
+    : `<li><span class="admin-list__reason">Nenhuma falta agendada.</span></li>`;
+
+  $$("#recurringExceptionsList .js-undo-except").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const li = btn.closest("li");
+      await api("/api/admin/recurring", {
+        method: "PUT",
+        body: { id: Number(li.dataset.id), date: li.dataset.date, cancel: false },
+      });
+      loadRecurring();
+      showToast("Desmarcação desfeita.");
+    });
+  });
+}
+
+$("#recurringForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    await api("/api/admin/recurring", {
+      method: "POST",
+      body: {
+        pro_id: "luiz",
+        weekday: Number(form.get("weekday")),
+        time: form.get("time"),
+        service_id: form.get("service_id"),
+        customer_name: form.get("customer_name"),
+        customer_phone: form.get("customer_phone"),
+      },
+    });
+    e.target.reset();
+    loadRecurring();
+    showToast("Cliente fixo adicionado.");
+  } catch (err) {
+    showToast(err.message === "slot_taken" ? "Já existe um cliente fixo nesse dia/horário." : "Não deu pra adicionar — confira os dados.");
+  }
+});
 
 /* ---------- Serviços ---------- */
 async function loadServices() {
@@ -324,4 +447,19 @@ $("#adminForm").addEventListener("submit", async (e) => {
   }
 });
 
+function setupTheme() {
+  const btn = $("#themeToggle");
+  if (!btn) return;
+  const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
+  btn.setAttribute("aria-pressed", String(isLight()));
+  btn.addEventListener("click", () => {
+    const light = !isLight();
+    if (light) document.documentElement.setAttribute("data-theme", "light");
+    else document.documentElement.removeAttribute("data-theme");
+    btn.setAttribute("aria-pressed", String(light));
+    try { localStorage.setItem("hulk-theme", light ? "light" : "dark"); } catch {}
+  });
+}
+
+setupTheme();
 checkSession();

@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <script src="/theme.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0e110e" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -125,18 +126,25 @@
         </span>
       </a>
 
-      <nav class="nav" id="nav" aria-label="Menu principal">
-        <a href="#servicos" class="nav__link">Serviços</a>
-        <a href="#agendamento" class="nav__link">Agendamento</a>
-        <a href="#profissionais" class="nav__link">Profissionais</a>
-        <a href="#galeria" class="nav__link">Galeria</a>
-        <a href="#contato" class="nav__link">Contato</a>
-        <a href="/admin" class="nav__link">Admin</a>
-      </nav>
+      <div class="header__actions">
+        <nav class="nav" id="nav" aria-label="Menu principal">
+          <a href="#servicos" class="nav__link">Serviços</a>
+          <a href="#agendamento" class="nav__link">Agendamento</a>
+          <a href="#profissionais" class="nav__link">Profissionais</a>
+          <a href="#galeria" class="nav__link">Galeria</a>
+          <a href="#contato" class="nav__link">Contato</a>
+          <a href="/admin" class="nav__link">Admin</a>
+        </nav>
 
-      <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav">
-        <span></span><span></span><span></span>
-      </button>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ativar modo claro" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </header>
 

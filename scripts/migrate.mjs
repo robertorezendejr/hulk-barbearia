@@ -85,6 +85,26 @@ CREATE TABLE IF NOT EXISTS booking_attempts (
   attempted_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_booking_attempts_ip_time ON booking_attempts (ip, attempted_at);
+
+-- clientes fixos: reservam o mesmo horário toda semana, indefinidamente
+CREATE TABLE IF NOT EXISTS recurring_appointments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pro_id TEXT NOT NULL,
+  weekday INTEGER NOT NULL, -- 0=domingo ... 6=sábado
+  time TEXT NOT NULL,
+  service_id TEXT NOT NULL REFERENCES services(id),
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recurring_slot ON recurring_appointments (pro_id, weekday, time);
+
+-- desmarcação pontual: libera o horário do cliente fixo numa data específica, sem apagar a recorrência
+CREATE TABLE IF NOT EXISTS recurring_exceptions (
+  recurring_id INTEGER NOT NULL REFERENCES recurring_appointments(id),
+  date TEXT NOT NULL,
+  PRIMARY KEY (recurring_id, date)
+);
 `);
 
 // SQLite não suporta "ADD COLUMN IF NOT EXISTS" — ignora erro se a coluna já existir
@@ -99,6 +119,14 @@ try {
   if (!String(err.message).includes("duplicate column")) throw err;
 }
 await db.execute("CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts (email, attempted_at)");
+
+// marca fotos importadas automaticamente do Instagram, pra não importar a mesma foto duas vezes
+try {
+  await db.execute("ALTER TABLE gallery_photos ADD COLUMN instagram_media_id TEXT");
+} catch (err) {
+  if (!String(err.message).includes("duplicate column")) throw err;
+}
+await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_gallery_instagram_media ON gallery_photos (instagram_media_id)");
 
 // promove o admin das variáveis de ambiente pro banco (bootstrap do primeiro admin)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {

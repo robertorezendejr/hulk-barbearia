@@ -1,5 +1,7 @@
 # Hulk Barbearia
 
+> **Rodar localmente:** `.env.local` com as variáveis do Turso/admin → `node --env-file=.env.local scripts/migrate.mjs` → `npx vercel dev`. Detalhes em [Como iniciar o site](#como-iniciar-o-site-desenvolvimento-local).
+
 **Barbearia Premium em Virgem Santa, Macaé/RJ**  
 Site de agendamento online — degradê, navalhado, social, undercut e muito mais.  
 Sala de espera com mesa de sinuca. Horário marcado.

@@ -14,11 +14,17 @@
 
 .admin-field { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; color: var(--text-dim); }
 .admin-field--grow { flex: 1 1 200px; }
-.admin-field input {
+.admin-field input, .admin-field select {
   background: var(--surface-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
   color: var(--text); padding: 10px 12px; font-size: 1rem; font-family: inherit;
 }
-.admin-field input:focus-visible { border-color: var(--hulk); }
+.admin-field input:focus-visible, .admin-field select:focus-visible { border-color: var(--hulk); }
+
+.admin-field select {
+  appearance: none; cursor: pointer; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23aeb6ae' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
 
 .admin-field input[type="file"] {
   width: 100%; box-sizing: border-box; padding: 8px 10px; color: var(--text-dim); font-size: .85rem;
@@ -49,6 +55,15 @@
   background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
   color: var(--text); padding: 6px 8px; font-family: inherit; width: 120px;
 }
+.admin-table input[type="date"] {
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 6px 8px; font-family: inherit; width: 145px;
+}
+.admin-table input[type="text"], .admin-table input[type="tel"], .admin-table select {
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
+  color: var(--text); padding: 6px 8px; font-family: inherit; width: 100%;
+}
+.admin-table td .btn { white-space: nowrap; }
 .admin-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--hulk); }
 
 .admin-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }

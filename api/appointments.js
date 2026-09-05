@@ -1,5 +1,7 @@
 import { db } from "./_db.js";
 import { createCalendarEvent } from "./_calendar.js";
+import { getRecurringBusy } from "./_recurring.js";
+import { VALID_PRO_IDS } from "./_pros.js";
 
 const PHONE_RE = /^\d{10,13}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -7,9 +9,6 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 
 const WINDOW_MS = 15 * 60 * 1000; // 15 min
 const MAX_ATTEMPTS = 8;
-
-// mesma lista de profissionais válidos usada no front (app.js -> PROS)
-const VALID_PRO_IDS = new Set(["luiz"]);
 
 const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && bStart < aEnd;
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { pro_id, date } = req.query;
     if (!pro_id || !DATE_RE.test(date || "")) return res.status(400).json({ error: "invalid_params" });
-    const [appts, slots] = await Promise.all([
+    const [appts, slots, recurring] = await Promise.all([
       db().execute({
         sql: `SELECT a.time, s.duration_min FROM appointments a
               JOIN services s ON s.id = a.service_id
@@ -32,6 +31,7 @@ export default async function handler(req, res) {
         args: [pro_id, date],
       }),
       db().execute({ sql: `SELECT time FROM blocked_slots WHERE date = ?`, args: [date] }),
+      getRecurringBusy(pro_id, date),
     ]);
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({
@@ -39,6 +39,7 @@ export default async function handler(req, res) {
       busy: [
         ...appts.rows.map((r) => ({ time: r.time, duration: r.duration_min })),
         ...slots.rows.map((r) => ({ time: r.time, duration: 1 })),
+        ...recurring,
       ],
     });
   }
@@ -104,15 +105,18 @@ export default async function handler(req, res) {
     if (hitsBlockedSlot) return res.status(400).json({ error: "closed" });
 
     // checa sobreposição real de intervalo (não só o horário de início) com agendamentos confirmados
-    const existing = await db().execute({
-      sql: `SELECT a.time, s.duration_min FROM appointments a
-            JOIN services s ON s.id = a.service_id
-            WHERE a.pro_id = ? AND a.date = ? AND a.status = 'confirmed'`,
-      args: [pro_id, date],
-    });
-    const hasOverlap = existing.rows.some((r) => {
+    const [existing, recurringBusy] = await Promise.all([
+      db().execute({
+        sql: `SELECT a.time, s.duration_min FROM appointments a
+              JOIN services s ON s.id = a.service_id
+              WHERE a.pro_id = ? AND a.date = ? AND a.status = 'confirmed'`,
+        args: [pro_id, date],
+      }),
+      getRecurringBusy(pro_id, date),
+    ]);
+    const hasOverlap = [...existing.rows, ...recurringBusy].some((r) => {
       const bStart = toMin(r.time);
-      return overlaps(startMin, endMin, bStart, bStart + r.duration_min);
+      return overlaps(startMin, endMin, bStart, bStart + (r.duration_min ?? r.duration));
     });
     if (hasOverlap) return res.status(409).json({ error: "slot_taken" });
 
