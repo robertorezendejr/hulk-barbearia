@@ -73,6 +73,8 @@
 }
 .admin-list .admin-list__reason { color: var(--text-dim); }
 
+.admin-progress { width: 100%; height: 8px; accent-color: var(--hulk); margin-top: 10px; }
+
 .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; margin-top: 16px; }
 .gallery-item { position: relative; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); aspect-ratio: 1; }
 .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -86,6 +88,7 @@
   background: rgba(0,0,0,.65); color: var(--text); border: 1px solid var(--line);
   font-size: 1rem; line-height: 1; cursor: pointer;
 }
+.gallery-item__del:disabled { cursor: default; opacity: .6; }
 
 .admin-toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);

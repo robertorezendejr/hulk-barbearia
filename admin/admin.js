@@ -107,9 +107,17 @@ async function loadGallery() {
   $$("#galleryGrid .js-del-photo").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.closest(".gallery-item").dataset.id);
-      await api("/api/admin/gallery", { method: "DELETE", body: { id } });
-      loadGallery();
-      showToast("Removido da galeria.");
+      btn.disabled = true;
+      btn.textContent = "…";
+      try {
+        await api("/api/admin/gallery", { method: "DELETE", body: { id } });
+        loadGallery();
+        showToast("Removido da galeria.");
+      } catch {
+        showToast("Não deu pra remover.");
+        btn.disabled = false;
+        btn.textContent = "×";
+      }
     });
   });
 }
@@ -138,6 +146,14 @@ $("#galleryForm").addEventListener("submit", async (e) => {
   const form = new FormData(e.target);
   const type = form.get("type");
   const caption = form.get("caption");
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  const progress = $("#galleryProgress");
+  submitBtn.disabled = true;
+  progress.value = 50;
+  progress.hidden = false;
+  // ponytail: progresso simulado (upload real termina rápido demais pra reportar frações úteis) —
+  // sobe sozinho até 90% e só bate 100% quando o item realmente aparece na galeria
+  const tick = setInterval(() => { if (progress.value < 90) progress.value += 4; }, 200);
   try {
     const body = { caption };
     if (type === "instagram") {
@@ -150,10 +166,15 @@ $("#galleryForm").addEventListener("submit", async (e) => {
     await api("/api/admin/gallery", { method: "POST", body });
     e.target.reset();
     galleryTypeSelect.dispatchEvent(new Event("change"));
-    loadGallery();
+    await loadGallery();
+    progress.value = 100;
     showToast("Adicionado à galeria.");
   } catch {
     showToast("Não deu pra enviar — confira o arquivo/link.");
+  } finally {
+    clearInterval(tick);
+    submitBtn.disabled = false;
+    setTimeout(() => { progress.hidden = true; progress.value = 0; }, 300);
   }
 });
 
