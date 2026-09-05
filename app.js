@@ -171,10 +171,6 @@ function renderTeam() {
 }
 
 /* --- Galeria de cortes --- */
-// proporções fixas em ciclo (em vez da altura natural de cada foto) — dá o ritmo Pinterest,
-// com colunas de alturas diferentes mesmo quando as fotos enviadas têm proporções parecidas
-const GALLERY_RATIOS = ["3/4", "16/9", "2/3", "1/1", "9/16", "3/4", "4/3", "2/3"];
-
 async function renderGallery() {
   const grid = $("#galleryGrid");
   let photos = [];
@@ -184,15 +180,14 @@ async function renderGallery() {
     /* galeria fica vazia se a API não responder */
   }
   grid.innerHTML = photos.length
-    ? photos.map((p, i) => {
+    ? photos.map((p) => {
         const caption = p.caption ? `<figcaption class="gallery__caption">${escapeHtml(p.caption)}</figcaption>` : "";
         const media = p.type === "video"
           ? `<video src="${escapeHtml(p.url)}" controls preload="metadata"></video>`
           : p.type === "instagram"
           ? `<iframe class="gallery__embed" src="${escapeHtml(p.url)}" loading="lazy" allow="encrypted-media" allowtransparency="true"></iframe>`
           : `<img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || "Corte feito na Hulk Barbearia")}" loading="lazy" />`;
-        const ratio = GALLERY_RATIOS[i % GALLERY_RATIOS.length];
-        return `<figure class="gallery__item" style="aspect-ratio:${ratio}">${media}${caption}</figure>`;
+        return `<figure class="gallery__item">${media}${caption}</figure>`;
       }).join("")
     : `<p class="gallery__empty">Em breve, fotos dos nossos cortes por aqui.</p>`;
 }
