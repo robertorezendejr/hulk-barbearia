@@ -160,11 +160,31 @@
       </section>
 
       <section class="admin-card">
-        <h2 class="admin-card__title">Serviços — preço e duração</h2>
+        <h2 class="admin-card__title">Serviços</h2>
+        <form id="serviceForm" class="admin-form admin-form--row">
+          <label class="admin-field">
+            <span>Ícone</span>
+            <input type="text" name="icon" value="✂️" maxlength="16" required size="4" />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Novo serviço</span>
+            <input type="text" name="name" maxlength="80" required />
+          </label>
+          <label class="admin-field">
+            <span>Preço (R$)</span>
+            <input type="number" name="price" min="0.01" step="0.01" required />
+          </label>
+          <label class="admin-field">
+            <span>Duração (min)</span>
+            <input type="number" name="duration_min" min="1" step="1" required />
+          </label>
+          <button type="submit" class="btn btn--primary">Adicionar serviço</button>
+        </form>
         <div class="admin-table-wrap">
           <table class="admin-table" id="servicesTable">
             <thead>
               <tr>
+                <th>Ícone</th>
                 <th>Serviço</th>
                 <th>Preço (R$)</th>
                 <th>Duração (min)</th>

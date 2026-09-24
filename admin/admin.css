@@ -18,6 +18,7 @@
   background: var(--surface-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
   color: var(--text); padding: 10px 12px; font-size: 1rem; font-family: inherit;
 }
+.admin-field input[name="icon"] { width: 64px; text-align: center; }
 .admin-field input:focus-visible, .admin-field select:focus-visible { border-color: var(--hulk); }
 
 .admin-field select {
@@ -63,6 +64,7 @@
   background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 8px;
   color: var(--text); padding: 6px 8px; font-family: inherit; width: 100%;
 }
+.admin-table input.js-icon { width: 56px; text-align: center; }
 .admin-table td .btn { white-space: nowrap; }
 .admin-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--hulk); }
 

@@ -320,7 +320,8 @@ async function loadServices() {
   const services = await api("/api/admin/services");
   $("#servicesBody").innerHTML = services.map((s) => `
     <tr data-id="${s.id}">
-      <td>${escapeHtml(s.icon)} ${escapeHtml(s.name)}</td>
+      <td><input type="text" class="js-icon" value="${escapeHtml(s.icon)}" maxlength="16" size="4" /></td>
+      <td><input type="text" class="js-name" value="${escapeHtml(s.name)}" maxlength="80" /></td>
       <td><input type="number" min="0" step="0.01" class="js-price" value="${s.price}" /></td>
       <td><input type="number" min="1" step="1" class="js-duration" value="${s.duration_min}" /></td>
       <td><input type="checkbox" class="js-active" ${s.active ? "checked" : ""} /></td>
@@ -330,11 +331,14 @@ async function loadServices() {
   $$("#servicesBody tr").forEach((row) => {
     row.querySelector(".js-save").addEventListener("click", async () => {
       const id = row.dataset.id;
+      const icon = row.querySelector(".js-icon").value;
+      const name = row.querySelector(".js-name").value;
       const price = Number(row.querySelector(".js-price").value);
       const duration_min = Number(row.querySelector(".js-duration").value);
       const active = row.querySelector(".js-active").checked;
       try {
-        await api("/api/admin/services", { method: "PUT", body: { id, price, duration_min, active } });
+        await api("/api/admin/services", { method: "PUT", body: { id, icon, name, price, duration_min, active } });
+        loadRecurring();
         showToast("Serviço atualizado.");
       } catch {
         showToast("Não deu pra salvar — confira os valores.");
@@ -342,6 +346,28 @@ async function loadServices() {
     });
   });
 }
+
+$("#serviceForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    await api("/api/admin/services", {
+      method: "POST",
+      body: {
+        icon: form.get("icon"),
+        name: form.get("name"),
+        price: Number(form.get("price")),
+        duration_min: Number(form.get("duration_min")),
+      },
+    });
+    e.target.reset();
+    loadServices();
+    loadRecurring();
+    showToast("Serviço adicionado.");
+  } catch {
+    showToast("Não deu pra adicionar — confira os dados.");
+  }
+});
 
 /* ---------- Horário de funcionamento ---------- */
 async function loadHours() {

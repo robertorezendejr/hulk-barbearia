@@ -2,6 +2,9 @@
 
 > **Rodar localmente:** `.env.local` com as variáveis do Turso/admin → `node --env-file=.env.local scripts/migrate.mjs` → `npx vercel dev`. Detalhes em [Como iniciar o site](#como-iniciar-o-site-desenvolvimento-local).
 
+cd /Users/robertorezendejr/Documents/www/Hulk-Barbearia
+npx vercel dev
+
 **Barbearia Premium em Virgem Santa, Macaé/RJ**  
 Site de agendamento online — degradê, navalhado, social, undercut e muito mais.  
 Sala de espera com mesa de sinuca. Horário marcado.
@@ -11,12 +14,14 @@ Sala de espera com mesa de sinuca. Horário marcado.
 ## Infraestrutura
 
 **Domínio**: `hulkbarbearia.com.br`, gerenciado via Cloudflare DNS (nameservers trocados no Registro.br). Aponta pro Vercel com:
+
 - `A hulkbarbearia.com.br → 76.76.21.21`
 - `CNAME www → cname.vercel-dns.com`
 
 Ambos configurados como **"Somente DNS"** (sem proxy) na Cloudflare.
 
 **E-mail (Resend)**: integração instalada via Vercel Marketplace, plano Free, região São Paulo (`sa-east-1`). Domínio **verificado**, com os registros DNS na Cloudflare:
+
 - `TXT resend._domainkey` (chave DKIM)
 - `MX send → feedback-smtp.sa-east-1.amazonses.com` (prioridade 10)
 - `TXT send → v=spf1 include:amazonses.com ~all`
@@ -62,13 +67,13 @@ O cliente agenda em menos de 60 segundos, direto pelo celular ou computador, sem
 
 Cards com todos os serviços, duração e valor. Clicar em qualquer card seleciona o serviço e rola automaticamente para o agendamento.
 
-| Serviço | Duração | Valor |
-|---|---|---|
-| ✂️ Corte Simples | 30 min | R$ 35,00 |
-| ✂️ Corte Disfarçado | 45 min | R$ 40,00 |
-| 🧔 Barba Comum | 30 min | R$ 25,00 |
-| 🔥 Corte + Barba | 60 min | R$ 60,00 |
-| 💈 Barboterapia c/ vapor de ozônio | 60 min | R$ 80,00 |
+| Serviço                            | Duração | Valor    |
+| ---------------------------------- | ------- | -------- |
+| ✂️ Corte Simples                   | 30 min  | R$ 35,00 |
+| ✂️ Corte Disfarçado                | 45 min  | R$ 40,00 |
+| 🧔 Barba Comum                     | 30 min  | R$ 25,00 |
+| 🔥 Corte + Barba                   | 60 min  | R$ 60,00 |
+| 💈 Barboterapia c/ vapor de ozônio | 60 min  | R$ 80,00 |
 
 ---
 
@@ -119,8 +124,8 @@ Confirma pra mim, por favor?
 
 ![Estrutura](docs/screenshots/07-estrutura.png)
 
-| 🎱 Sinuca | 🛋️ Sala de espera | 📅 Horário marcado | ✂️ Múltiplos estilos |
-|---|---|---|---|
+| 🎱 Sinuca                                  | 🛋️ Sala de espera                  | 📅 Horário marcado                | ✂️ Múltiplos estilos                        |
+| ------------------------------------------ | ---------------------------------- | --------------------------------- | ------------------------------------------- |
 | Mesa de sinuca disponível enquanto aguarda | Ambiente climatizado e confortável | Sem fila, chegue no horário certo | Degradê, navalhado, social, undercut e mais |
 
 ---
@@ -135,20 +140,20 @@ Confirma pra mim, por favor?
 
 ![Contato](docs/screenshots/09-contato.png)
 
-| | |
-|---|---|
+|             |                                                                       |
+| ----------- | --------------------------------------------------------------------- |
 | 📍 Endereço | Estr. Virgem Santa, 801 - 08, Virgem Santa — Macaé/RJ — CEP 27930-480 |
-| 📞 Telefone | (22) 99272-1235 |
-| 💬 WhatsApp | (22) 99622-8571 |
-| 🕗 Seg–Sex | 08:00 às 19:00 |
-| 🕗 Sábado | 08:00 às 18:00 |
+| 📞 Telefone | (22) 99272-1235                                                       |
+| 💬 WhatsApp | (22) 99622-8571                                                       |
+| 🕗 Seg–Sex  | 08:00 às 19:00                                                        |
+| 🕗 Sábado   | 08:00 às 18:00                                                        |
 
 ---
 
 ## Versão Mobile
 
-| Hero | Agendamento |
-|---|---|
+| Hero                                                | Agendamento                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------- |
 | ![Mobile hero](docs/screenshots/10-mobile-hero.png) | ![Mobile agendamento](docs/screenshots/11-mobile-agendamento.png) |
 
 Site **mobile-first**: botão flutuante "✂️ Agendar" aparece ao rolar, menu hambúrguer, toque sem delay.
@@ -159,15 +164,15 @@ Site **mobile-first**: botão flutuante "✂️ Agendar" aparece ao rolar, menu 
 
 Site estático puro — sem backend, sem banco de dados, sem build.
 
-| Arquivo | Função |
-|---|---|
-| `index.html` | Estrutura da página |
-| `styles.css` | Visual dark premium + animações + responsividade |
-| `app.js` | Agendamento, calendário e integração WhatsApp |
-| `vercel.json` | Configuração de deploy |
-| `sitemap.xml` | Indexação no Google |
-| `robots.txt` | Rastreamento de buscadores |
+| Arquivo       | Função                                           |
+| ------------- | ------------------------------------------------ |
+| `index.html`  | Estrutura da página                              |
+| `styles.css`  | Visual dark premium + animações + responsividade |
+| `app.js`      | Agendamento, calendário e integração WhatsApp    |
+| `vercel.json` | Configuração de deploy                           |
+| `sitemap.xml` | Indexação no Google                              |
+| `robots.txt`  | Rastreamento de buscadores                       |
 
 ---
 
-*Hulk Barbearia · Virgem Santa, Macaé/RJ*
+_Hulk Barbearia · Virgem Santa, Macaé/RJ_
