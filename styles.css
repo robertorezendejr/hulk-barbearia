@@ -366,10 +366,15 @@ ul, ol { list-style: none; }
 .summary__field input:focus-visible { border-color: var(--hulk); }
 .summary__field-hint { font-size: .78rem; color: var(--text-dim); }
 .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
-.cancel__intro { margin: 0 0 16px; text-align: left; }
-#cancelConfirmBtn { margin-top: 14px; }
-.cancel__countdown { margin-top: 12px; text-align: center; font-size: 1rem; font-weight: 700; color: var(--accent); }
-.cancel__result { margin-bottom: 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: .92rem; }
+.hero__mine { display: block; margin-top: 16px; font-size: .95rem; }
+.mine__intro { margin: 0 0 16px; text-align: left; }
+.mine__list { display: grid; gap: 10px; margin-top: 14px; }
+.mine__item { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: .92rem; }
+.mine__item small { color: var(--text-dim); }
+.mine__empty { text-align: center; gap: 4px; color: var(--text-dim); }
+.mine__empty strong { color: var(--text); font-size: 1rem; }
+.mine__empty .btn { margin-top: 8px; }
+.mine__close { margin-top: 10px; }
 
 /* ===================== PROFISSIONAIS (seção) ===================== */
 .team { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
@@ -534,7 +539,7 @@ ul, ol { list-style: none; }
   100% { transform: scale(0.1); opacity: 0; }
 }
 
-/* "Obrigado pelo agendamento" + código de cancelamento — fecha no botão */
+/* "Obrigado pelo agendamento" — fecha no botão */
 .booking-success {
   position: fixed; inset: 0; z-index: 9999;
   display: grid; place-items: center; align-content: center; gap: 10px; text-align: center;
@@ -548,26 +553,13 @@ ul, ol { list-style: none; }
   font-size: clamp(1.1rem, 3.5vw, 1.5rem); color: var(--text-dim);
 }
 .booking-success__box { display: grid; gap: 10px; justify-items: center; max-width: 360px; }
-/* código pisca verde ↔ roxo (as cores do Hulk), com moldura piscando em volta */
-.booking-success__code {
-  font-size: clamp(2.6rem, 13vw, 4rem); font-weight: 800; letter-spacing: .18em;
-  padding: .15em .25em .15em .43em; /* letter-spacing deixa sobra à direita — compensa à esquerda */
-  border: 3px solid; border-radius: var(--radius);
-  animation: code-blink 1.2s ease-in-out infinite alternate;
-}
-@keyframes code-blink {
-  from {
-    color: var(--hulk-bright); border-color: var(--hulk-bright);
-    text-shadow: 0 0 18px rgba(92, 255, 110, .6);
-    box-shadow: 0 0 28px rgba(92, 255, 110, .7), inset 0 0 18px rgba(92, 255, 110, .35);
-  }
-  to {
-    color: #b36bff; border-color: #b36bff;
-    text-shadow: 0 0 18px rgba(179, 107, 255, .6);
-    box-shadow: 0 0 28px rgba(179, 107, 255, .7), inset 0 0 18px rgba(179, 107, 255, .35);
-  }
-}
 .booking-success__box p { color: var(--text-dim); font-size: .92rem; }
+/* dia e hora em destaque — é o que o cliente precisa lembrar */
+.booking-success__box .booking-success__when {
+  margin-top: 6px; padding: 12px 18px; border: 2px solid var(--hulk-bright); border-radius: var(--radius);
+  color: var(--text); font-size: clamp(1.2rem, 5vw, 1.5rem); font-weight: 800;
+}
+.booking-success__box .booking-success__service { margin-bottom: 8px; color: var(--text); font-size: 1rem; }
 @keyframes booking-success-fade {
   from { opacity: 0; } to { opacity: 1; }
 }

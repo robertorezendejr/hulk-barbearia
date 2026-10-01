@@ -275,6 +275,8 @@ function selectService(id, scroll) {
   unlock(2);
   setStep(2);
   updateSummary();
+  // ponytail: só um profissional → já marca ele; com mais de um, o cliente volta a escolher sozinho
+  if (PROS.length === 1) selectPro(PROS[0].id);
   if (scroll) document.getElementById("agendamento").scrollIntoView({ behavior: "smooth" });
 }
 
@@ -352,7 +354,6 @@ function hulkPunch(cb) {
 /* confirmação → salva o agendamento no banco (e no Google Calendar) */
 async function confirmBooking() {
   const { service, pro, date, time } = state;
-  let cancelCode;
   if (!service || !pro || !date || !time || bookingInFlight) return;
 
   const name = $("#customerName").value.trim();
@@ -389,7 +390,6 @@ async function confirmBooking() {
       showToast("Não deu pra confirmar o agendamento. Tente novamente.");
       return;
     }
-    cancelCode = (await res.json()).cancel_code;
   } catch {
     showToast("Falha de conexão. Tente novamente.");
     return;
@@ -402,34 +402,23 @@ async function confirmBooking() {
   localStorage.setItem("customerPhone", $("#customerPhone").value.trim());
 
   showToast("Agendamento confirmado!");
-  try { localStorage.setItem("cancelCode", cancelCode); } catch {}
-  hulkPunch(() => showBookingSuccess(name, cancelCode));
+  hulkPunch(() => showBookingSuccess(name, `${DOW[date.getDay()]}, ${fmtFull(date)} às ${time}`, service.name));
 }
 
-/* mensagem "Obrigado pelo agendamento" após o soco do Hulk, com o código de cancelamento → fecha no botão */
-function showBookingSuccess(name, code) {
-  const link = `${location.origin}/?cancelar=${code}`;
+/* mensagem "Obrigado pelo agendamento" após o soco do Hulk → fecha no botão */
+function showBookingSuccess(name, when, serviceName) {
   const el = document.createElement("div");
   el.className = "booking-success";
   el.innerHTML = `
     <p class="booking-success__title">Obrigado pelo Agendamento!</p>
     <p class="booking-success__name">${escapeHtml(name)}</p>
     <div class="booking-success__box">
-      <p>Seu código pra cancelar, se precisar (até 1h antes):</p>
-      <p class="booking-success__code">${escapeHtml(code)}</p>
-      <p>Guarde o código ou o link de cancelamento. Pra cancelar, você vai precisar dele e do seu celular.</p>
-      <button class="btn btn--ghost btn--block" type="button" data-share>Salvar link de cancelamento</button>
+      <p class="booking-success__when">${escapeHtml(when)}</p>
+      <p class="booking-success__service">${escapeHtml(serviceName)}</p>
+      <p>Pra ver ou cancelar seu horário (até 1h antes), toque em <strong>📅 Meus horários</strong> no topo do site.</p>
       <button class="btn btn--primary btn--block" type="button" data-done>Fechar</button>
     </div>`;
   document.body.appendChild(el);
-  el.querySelector("[data-share]").addEventListener("click", async () => {
-    // link vai separado em `url`: assim o "Copiar" do compartilhar copia só o link, que abre direto no navegador
-    const text = `Hulk Barbearia — código pra cancelar meu horário: ${code}`;
-    try {
-      if (navigator.share) await navigator.share({ text, url: link });
-      else { await navigator.clipboard.writeText(link); showToast("Link copiado!"); }
-    } catch {}
-  });
   el.querySelector("[data-done]").addEventListener("click", () => {
     el.remove();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -437,45 +426,28 @@ function showBookingSuccess(name, code) {
 }
 
 /* =========================================================
-   CANCELAMENTO PELO CLIENTE (celular + código)
+   MEUS HORÁRIOS (cliente vê e cancela pelo celular)
    ========================================================= */
-let cancelCloseTimer;
-function openCancel(code) {
-  clearInterval(cancelCloseTimer);
-  $("#cancelCloseBtn").hidden = true;
-  $("#cancelCountdown").hidden = true;
-  $("#cancelPhone").value = $("#customerPhone").value;
-  let saved = null;
-  try { saved = localStorage.getItem("cancelCode"); } catch {}
-  $("#cancelCode").value = code || saved || "";
-  $("#cancelResult").hidden = true;
-  $("#cancelConfirmBtn").hidden = true;
-  $("#cancelFindBtn").hidden = false;
-  $("#cancelModal").classList.add("is-open");
-  $("#cancelModal").setAttribute("aria-hidden", "false");
+let mineAppts = [];
+function openMine() {
+  $("#minePhone").value = $("#customerPhone").value; // já vem do localStorage se o cliente marcou neste aparelho
+  $("#mineList").hidden = true;
+  $("#mineModal").classList.add("is-open");
+  $("#mineModal").setAttribute("aria-hidden", "false");
+  if ($("#minePhone").value.replace(/\D/g, "").length >= 10) findMine(); // mesmo celular: abre direto com os horários
 }
-function closeCancel() {
-  clearInterval(cancelCloseTimer);
-  $("#cancelModal").classList.remove("is-open");
-  $("#cancelModal").setAttribute("aria-hidden", "true");
+function closeMine() {
+  $("#mineModal").classList.remove("is-open");
+  $("#mineModal").setAttribute("aria-hidden", "true");
 }
 
-async function cancelRequest(confirm) {
+async function mineRequest(body) {
   const res = await fetch("/api/appointments", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      customer_phone: $("#cancelPhone").value,
-      cancel_code: $("#cancelCode").value,
-      confirm,
-    }),
+    body: JSON.stringify({ customer_phone: $("#minePhone").value, ...body }),
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
-}
-
-function showCancelResult(html) {
-  $("#cancelResult").innerHTML = html;
-  $("#cancelResult").hidden = false;
 }
 
 const fmtAppt = (a) => {
@@ -483,64 +455,71 @@ const fmtAppt = (a) => {
   return `<strong>${escapeHtml(a.service_name)}</strong><br>${d}/${m}/${y} às ${escapeHtml(a.time)}`;
 };
 
-async function findAppointmentToCancel() {
-  if ($("#cancelPhone").value.replace(/\D/g, "").length < 10) { showToast("Informe o celular usado na marcação."); return; }
-  if (!$("#cancelCode").value.trim()) { showToast("Informe o código de cancelamento."); return; }
-  $("#cancelConfirmBtn").hidden = true;
+function renderMine() {
+  const box = $("#mineList");
+  box.hidden = false;
+  box.innerHTML = mineAppts.length
+    ? mineAppts.map((a) => `
+      <div class="mine__item">
+        <p>${fmtAppt(a)}</p>
+        ${a.can_cancel
+          ? `<button class="btn btn--ghost btn--block" type="button" data-cancel="${a.id}">Cancelar horário</button>`
+          : `<small>Falta menos de 1 hora — pra desmarcar, fale com a barbearia pelo WhatsApp.</small>`}
+      </div>`).join("")
+    : `<div class="mine__item mine__empty"><strong>📭 Você não tem horários marcados</strong>Nenhum agendamento encontrado pra esse celular.<a href="#agendamento" class="btn btn--primary btn--block" data-book>Agendar horário</a></div>`;
+}
+
+async function findMine() {
+  if ($("#minePhone").value.replace(/\D/g, "").length < 10) { showToast("Informe o celular usado na marcação."); return; }
+  const btn = $("#mineFindBtn");
+  btn.disabled = true;
+  btn.textContent = "Buscando…";
   try {
-    const { status, data } = await cancelRequest(false);
+    const { status, data } = await mineRequest({});
     if (status === 200) {
-      showCancelResult(fmtAppt(data));
-      $("#cancelFindBtn").hidden = true;
-      $("#cancelConfirmBtn").hidden = false;
-    } else if (status === 409) {
-      showCancelResult(`${fmtAppt(data)}<br><br>Falta menos de 1 hora pro horário — pelo site não dá mais pra cancelar. Fale com a barbearia pelo WhatsApp.`);
-    } else if (status === 404) {
-      showCancelResult("Nenhum agendamento ativo com esse celular e código. Confira os dados.");
-    } else if (status === 429) {
-      showToast("Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.");
-    } else {
-      showToast("Confira o celular e o código.");
+      mineAppts = data.appointments;
+      renderMine();
+      if (!mineAppts.length) showToast("Você não tem horários marcados.");
     }
+    else if (status === 429) showToast("Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.");
+    else showToast("Confira o celular.");
   } catch {
     showToast("Falha de conexão. Tente novamente.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Ver meus horários";
   }
 }
 
-/* depois de cancelar: botão Fechar + fecha sozinho em 10s, com a contagem na tela */
-function startCancelCountdown() {
-  let left = 10;
-  const tick = () => { $("#cancelCountdown").textContent = `Fechando em ${left}s`; };
-  tick();
-  $("#cancelCloseBtn").hidden = false;
-  $("#cancelCountdown").hidden = false;
-  cancelCloseTimer = setInterval(() => {
-    left -= 1;
-    if (left <= 0) closeCancel();
-    else tick();
-  }, 1000);
-}
-
-async function confirmCancel() {
-  $("#cancelConfirmBtn").disabled = true;
+/* "Cancelar horário" pede um segundo toque pra confirmar */
+async function onMineClick(e) {
+  if (e.target.closest("[data-book]")) { closeMine(); return; } // o href leva até o agendamento
+  const btn = e.target.closest("[data-cancel]");
+  if (!btn) return;
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = "1";
+    btn.className = "btn btn--danger btn--block";
+    btn.textContent = "Toque de novo pra confirmar";
+    return;
+  }
+  btn.disabled = true;
   try {
-    const { status, data } = await cancelRequest(true);
+    const id = Number(btn.dataset.cancel);
+    const { status } = await mineRequest({ id, confirm: true });
     if (status === 200) {
-      showCancelResult(`${fmtAppt(data)}<br><br>Agendamento cancelado. O horário foi liberado.`);
-      $("#cancelConfirmBtn").hidden = true;
-      try { localStorage.removeItem("cancelCode"); } catch {}
+      showToast("Horário cancelado. O horário foi liberado.");
+      mineAppts = mineAppts.filter((a) => a.id !== id);
+      renderMine();
       if (state.date) renderTimes();
-      startCancelCountdown();
     } else if (status === 409) {
-      showCancelResult(`${fmtAppt(data)}<br><br>Falta menos de 1 hora pro horário — fale com a barbearia pelo WhatsApp.`);
-      $("#cancelConfirmBtn").hidden = true;
+      showToast("Falta menos de 1 hora — fale com a barbearia pelo WhatsApp.");
     } else {
       showToast("Não deu pra cancelar. Tente novamente.");
     }
   } catch {
     showToast("Falha de conexão. Tente novamente.");
   } finally {
-    $("#cancelConfirmBtn").disabled = false;
+    btn.disabled = false;
   }
 }
 
@@ -702,15 +681,14 @@ async function init() {
   $("#calPrev").addEventListener("click", () => { cal.view.setMonth(cal.view.getMonth() - 1); renderCal(); });
   $("#calNext").addEventListener("click", () => { cal.view.setMonth(cal.view.getMonth() + 1); renderCal(); });
   $$("#calModal [data-close]").forEach((el) => el.addEventListener("click", closeCal));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCal(); closeCancel(); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCal(); closeMine(); } });
 
-  $("#openCancelBtn").addEventListener("click", () => openCancel());
-  $("#cancelFindBtn").addEventListener("click", findAppointmentToCancel);
-  $("#cancelConfirmBtn").addEventListener("click", confirmCancel);
-  $("#cancelCloseBtn").addEventListener("click", closeCancel);
-  $$("#cancelModal [data-close]").forEach((el) => el.addEventListener("click", closeCancel));
-  const linkCode = new URLSearchParams(location.search).get("cancelar");
-  if (linkCode) openCancel(linkCode);
+  $("#openMineBtn").addEventListener("click", openMine);
+  $("#navMineLink").addEventListener("click", (e) => { e.preventDefault(); openMine(); }); // o menu já fecha sozinho no clique
+  $("#mineFindBtn").addEventListener("click", findMine);
+  $("#mineList").addEventListener("click", onMineClick);
+  $("#mineCloseBtn").addEventListener("click", closeMine);
+  $$("#mineModal [data-close]").forEach((el) => el.addEventListener("click", closeMine));
 }
 
 document.addEventListener("DOMContentLoaded", init);

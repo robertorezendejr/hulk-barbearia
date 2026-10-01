@@ -2,11 +2,14 @@
 
 > **Rodar localmente:** `.env.local` com as variáveis do Turso/admin → `node --env-file=.env.local scripts/migrate.mjs` → `npx vercel dev`. Detalhes em [Como iniciar o site](#como-iniciar-o-site-desenvolvimento-local).
 
-Para ligaar
+Para ligar
 npx vercel dev
 
 cd /Users/robertorezendejr/Documents/www/Hulk-Barbearia
 npx vercel dev
+
+ver o deploy
+https://vercel.com/robertorezendejrs-projects/hulk-barbearia/deployments
 
 **Barbearia Premium em Virgem Santa, Macaé/RJ**  
 Site de agendamento online — degradê, navalhado, social, undercut e muito mais.  

@@ -1,4 +1,3 @@
-import { randomInt } from "node:crypto";
 import { db } from "./_db.js";
 import { createCalendarEvent, deleteCalendarEvent } from "./_calendar.js";
 import { getRecurringBusy } from "./_recurring.js";
@@ -10,10 +9,8 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 
 const WINDOW_MS = 15 * 60 * 1000; // 15 min
 const MAX_ATTEMPTS = 8;
+const MAX_MINE_ATTEMPTS = 30; // "Meus horários" busca sozinho ao abrir o modal → precisa de mais folga
 const CANCEL_LIMIT_MS = 60 * 60 * 1000; // cliente só cancela pelo site até 1h antes
-// sem 0/O/1/I/L pra não confundir na hora de digitar
-const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const newCancelCode = () => Array.from({ length: 6 }, () => CODE_CHARS[randomInt(CODE_CHARS.length)]).join("");
 
 const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && bStart < aEnd;
@@ -24,14 +21,16 @@ function clientIp(req) {
   return req.socket?.remoteAddress || "unknown";
 }
 
-// limita tentativas por IP (marcação e cancelamento) — também impede chutar códigos de cancelamento
-async function tooManyAttempts(req) {
-  const ip = clientIp(req);
+// limita tentativas por IP — também freia quem tenta varrer números de celular.
+// bucket separa os contadores: abrir "Meus horários" não gasta as tentativas de marcação.
+// ponytail: bucket vai como prefixo do ip pra não precisar de coluna nova na tabela
+async function tooManyAttempts(req, bucket = "", max = MAX_ATTEMPTS) {
+  const ip = bucket + clientIp(req);
   const recent = await db().execute({
     sql: `SELECT COUNT(*) as n FROM booking_attempts WHERE ip = ? AND attempted_at > ?`,
     args: [ip, Date.now() - WINDOW_MS],
   });
-  if (Number(recent.rows[0].n) >= MAX_ATTEMPTS) return true;
+  if (Number(recent.rows[0].n) >= max) return true;
   await db().execute({
     sql: `INSERT INTO booking_attempts (ip, attempted_at) VALUES (?, ?)`,
     args: [ip, Date.now()],
@@ -133,12 +132,11 @@ export default async function handler(req, res) {
     if (hasOverlap) return res.status(409).json({ error: "slot_taken" });
 
     let appointmentId;
-    const cancelCode = newCancelCode();
     try {
       const inserted = await db().execute({
-        sql: `INSERT INTO appointments (service_id, pro_id, date, time, customer_name, customer_phone, cancel_code, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [service_id, pro_id, date, time, name, phone, cancelCode, Date.now()],
+        sql: `INSERT INTO appointments (service_id, pro_id, date, time, customer_name, customer_phone, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [service_id, pro_id, date, time, name, phone, Date.now()],
       });
       appointmentId = inserted.lastInsertRowid;
     } catch (err) {
@@ -162,39 +160,49 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(201).json({ ok: true, cancel_code: cancelCode });
+    return res.status(201).json({ ok: true });
   }
 
-  // cancelamento pelo próprio cliente: celular + código. Sem confirm → só mostra o agendamento.
+  // "Meus horários": cliente vê e cancela os próprios horários só com o celular (decisão do dono: sem código).
+  // Sem confirm → lista os próximos horários; com id + confirm → cancela aquele.
   // ponytail: fica neste arquivo de propósito — plano Hobby da Vercel já está no limite de 12 funções
   if (req.method === "PATCH") {
-    if (await tooManyAttempts(req)) return res.status(429).json({ error: "too_many_attempts" });
-    const { customer_phone, cancel_code, confirm } = req.body || {};
+    if (await tooManyAttempts(req, "mine:", MAX_MINE_ATTEMPTS)) return res.status(429).json({ error: "too_many_attempts" });
+    const { customer_phone, id, confirm } = req.body || {};
     const phone = normalizePhone(customer_phone);
-    const code = String(cancel_code || "").trim().toUpperCase();
-    if (!PHONE_RE.test(phone) || !code) return res.status(400).json({ error: "invalid_params" });
-
-    const r = await db().execute({
-      sql: `SELECT a.id, a.date, a.time, a.customer_name, a.calendar_event_id, s.name AS service_name
-            FROM appointments a JOIN services s ON s.id = a.service_id
-            WHERE a.customer_phone = ? AND a.cancel_code = ? AND a.status = 'confirmed'`,
-      args: [phone, code],
-    });
-    const appt = r.rows[0];
-    if (!appt) return res.status(404).json({ error: "not_found" });
+    if (!PHONE_RE.test(phone)) return res.status(400).json({ error: "invalid_params" });
 
     // ponytail: fuso fixo -03:00 (Brasil sem horário de verão desde 2019); usar Intl se voltar
-    const startsAt = Date.parse(`${appt.date}T${appt.time}:00-03:00`);
-    const info = { date: appt.date, time: appt.time, service_name: appt.service_name, customer_name: appt.customer_name };
-    if (startsAt - Date.now() < CANCEL_LIMIT_MS) return res.status(409).json({ error: "too_late", ...info });
-    if (!confirm) return res.status(200).json(info);
+    const today = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const r = await db().execute({
+      sql: `SELECT a.id, a.date, a.time, a.calendar_event_id, s.name AS service_name
+            FROM appointments a JOIN services s ON s.id = a.service_id
+            WHERE a.customer_phone = ? AND a.status = 'confirmed' AND a.date >= ?
+            ORDER BY a.date, a.time`,
+      args: [phone, today],
+    });
+    const now = Date.now();
+    const upcoming = r.rows
+      .map((a) => ({ ...a, startsAt: Date.parse(`${a.date}T${a.time}:00-03:00`) }))
+      .filter((a) => a.startsAt > now)
+      .map((a) => ({ ...a, can_cancel: a.startsAt - now >= CANCEL_LIMIT_MS }));
+
+    if (!confirm) {
+      return res.status(200).json({
+        appointments: upcoming.map(({ id, date, time, service_name, can_cancel }) => ({ id, date, time, service_name, can_cancel })),
+      });
+    }
+
+    const appt = upcoming.find((a) => Number(a.id) === Number(id));
+    if (!appt) return res.status(404).json({ error: "not_found" });
+    if (!appt.can_cancel) return res.status(409).json({ error: "too_late" });
 
     await db().execute({
       sql: `UPDATE appointments SET status = 'cancelled' WHERE id = ?`,
       args: [appt.id],
     });
     await deleteCalendarEvent(appt.calendar_event_id);
-    return res.status(200).json({ ok: true, ...info });
+    return res.status(200).json({ ok: true });
   }
 
   res.status(405).end();
