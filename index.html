@@ -248,13 +248,15 @@
               </label>
               <label class="summary__field">
                 <span>WhatsApp (DDD + número)</span>
-                <input type="tel" id="customerPhone" autocomplete="tel" placeholder="22999999999" required />
+                <input type="tel" id="customerPhone" autocomplete="tel" placeholder="22999999999" required aria-describedby="phoneHint" />
+                <small id="phoneHint" class="summary__field-hint">Obrigatório: é com ele que você pode cancelar o agendamento.</small>
               </label>
             </div>
             <button class="btn btn--primary btn--lg btn--block" id="confirmBtn" type="button" disabled>
               Confirmar Agendamento
             </button>
             <p class="summary__hint">Seu horário já fica reservado na agenda — sem precisar de mais nada.</p>
+            <p class="summary__hint"><button class="link-btn" id="openCancelBtn" type="button">Precisa desmarcar? Cancelar agendamento</button></p>
           </div>
         </div>
       </div>
@@ -392,6 +394,27 @@
   </a>
 
   <!-- ===================== MODAL CALENDÁRIO ===================== -->
+  <div class="modal" id="cancelModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="cancelTitle">
+      <h3 id="cancelTitle" class="summary__title">Cancelar agendamento</h3>
+      <p class="summary__hint cancel__intro">Informe o celular usado na marcação e o código que apareceu ao confirmar. Cancelamento até 1 hora antes do horário.</p>
+      <div class="summary__fields">
+        <label class="summary__field">
+          <span>WhatsApp (DDD + número)</span>
+          <input type="tel" id="cancelPhone" autocomplete="tel" placeholder="22999999999" />
+        </label>
+        <label class="summary__field">
+          <span>Código de cancelamento</span>
+          <input type="text" id="cancelCode" autocomplete="off" autocapitalize="characters" maxlength="6" placeholder="Ex: K7P2QM" />
+        </label>
+      </div>
+      <div id="cancelResult" class="cancel__result" hidden></div>
+      <button class="btn btn--primary btn--block" id="cancelFindBtn" type="button">Buscar agendamento</button>
+      <button class="btn btn--primary btn--block" id="cancelConfirmBtn" type="button" hidden>Sim, cancelar este horário</button>
+    </div>
+  </div>
+
   <div class="modal" id="calModal" aria-hidden="true">
     <div class="modal__backdrop" data-close></div>
     <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="calTitle">

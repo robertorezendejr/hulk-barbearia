@@ -358,6 +358,10 @@ ul, ol { list-style: none; }
   color: var(--text); padding: 10px 12px; font-size: 1rem; font-family: inherit;
 }
 .summary__field input:focus-visible { border-color: var(--hulk); }
+.summary__field-hint { font-size: .78rem; color: var(--text-dim); }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.cancel__intro { margin: 0 0 16px; text-align: left; }
+.cancel__result { margin-bottom: 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: .92rem; }
 
 /* ===================== PROFISSIONAIS (seção) ===================== */
 .team { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
@@ -522,10 +526,10 @@ ul, ol { list-style: none; }
   100% { transform: scale(0.1); opacity: 0; }
 }
 
-/* "Obrigado pelo agendamento" — some sozinho depois de 2s */
+/* "Obrigado pelo agendamento" + código de cancelamento — fecha no botão */
 .booking-success {
   position: fixed; inset: 0; z-index: 9999;
-  display: grid; place-items: center; gap: 10px; text-align: center;
+  display: grid; place-items: center; align-content: center; gap: 10px; text-align: center;
   padding: 24px; background: rgba(6, 10, 6, .94);
   animation: booking-success-fade .35s ease both;
 }
@@ -535,6 +539,9 @@ ul, ol { list-style: none; }
 .booking-success__name {
   font-size: clamp(1.1rem, 3.5vw, 1.5rem); color: var(--text-dim);
 }
+.booking-success__box { display: grid; gap: 10px; justify-items: center; max-width: 360px; }
+.booking-success__code { font-size: clamp(1.8rem, 8vw, 2.4rem); font-weight: 800; letter-spacing: .2em; color: var(--heading); }
+.booking-success__box p { color: var(--text-dim); font-size: .92rem; }
 @keyframes booking-success-fade {
   from { opacity: 0; } to { opacity: 1; }
 }

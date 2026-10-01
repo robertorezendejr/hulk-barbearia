@@ -120,6 +120,13 @@ try {
 }
 await db.execute("CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts (email, attempted_at)");
 
+// código que o cliente usa (junto com o celular) pra cancelar o próprio agendamento pelo site
+try {
+  await db.execute("ALTER TABLE appointments ADD COLUMN cancel_code TEXT");
+} catch (err) {
+  if (!String(err.message).includes("duplicate column")) throw err;
+}
+
 // marca fotos importadas automaticamente do Instagram, pra não importar a mesma foto duas vezes
 try {
   await db.execute("ALTER TABLE gallery_photos ADD COLUMN instagram_media_id TEXT");

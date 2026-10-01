@@ -352,6 +352,7 @@ function hulkPunch(cb) {
 /* confirmação → salva o agendamento no banco (e no Google Calendar) */
 async function confirmBooking() {
   const { service, pro, date, time } = state;
+  let cancelCode;
   if (!service || !pro || !date || !time || bookingInFlight) return;
 
   const name = $("#customerName").value.trim();
@@ -388,6 +389,7 @@ async function confirmBooking() {
       showToast("Não deu pra confirmar o agendamento. Tente novamente.");
       return;
     }
+    cancelCode = (await res.json()).cancel_code;
   } catch {
     showToast("Falha de conexão. Tente novamente.");
     return;
@@ -400,21 +402,125 @@ async function confirmBooking() {
   localStorage.setItem("customerPhone", $("#customerPhone").value.trim());
 
   showToast("Agendamento confirmado!");
-  hulkPunch(() => showBookingSuccess(name));
+  try { localStorage.setItem("cancelCode", cancelCode); } catch {}
+  hulkPunch(() => showBookingSuccess(name, cancelCode));
 }
 
-/* mensagem "Obrigado pelo agendamento" após o soco do Hulk → some e volta ao topo */
-function showBookingSuccess(name) {
+/* mensagem "Obrigado pelo agendamento" após o soco do Hulk, com o código de cancelamento → fecha no botão */
+function showBookingSuccess(name, code) {
+  const link = `${location.origin}/?cancelar=${code}`;
   const el = document.createElement("div");
   el.className = "booking-success";
   el.innerHTML = `
     <p class="booking-success__title">Obrigado pelo Agendamento!</p>
-    <p class="booking-success__name">${escapeHtml(name)}</p>`;
+    <p class="booking-success__name">${escapeHtml(name)}</p>
+    <div class="booking-success__box">
+      <p>Seu código pra cancelar, se precisar (até 1h antes):</p>
+      <p class="booking-success__code">${escapeHtml(code)}</p>
+      <p>Guarde o código ou o link de cancelamento. Pra cancelar, você vai precisar dele e do seu celular.</p>
+      <button class="btn btn--ghost btn--block" type="button" data-share>Salvar link de cancelamento</button>
+      <button class="btn btn--primary btn--block" type="button" data-done>Fechar</button>
+    </div>`;
   document.body.appendChild(el);
-  setTimeout(() => {
+  el.querySelector("[data-share]").addEventListener("click", async () => {
+    const text = `Hulk Barbearia — código pra cancelar meu horário: ${code}\n${link}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); showToast("Link copiado!"); }
+    } catch {}
+  });
+  el.querySelector("[data-done]").addEventListener("click", () => {
     el.remove();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, 2000);
+  });
+}
+
+/* =========================================================
+   CANCELAMENTO PELO CLIENTE (celular + código)
+   ========================================================= */
+function openCancel(code) {
+  $("#cancelPhone").value = $("#customerPhone").value;
+  let saved = null;
+  try { saved = localStorage.getItem("cancelCode"); } catch {}
+  $("#cancelCode").value = code || saved || "";
+  $("#cancelResult").hidden = true;
+  $("#cancelConfirmBtn").hidden = true;
+  $("#cancelFindBtn").hidden = false;
+  $("#cancelModal").classList.add("is-open");
+  $("#cancelModal").setAttribute("aria-hidden", "false");
+}
+function closeCancel() {
+  $("#cancelModal").classList.remove("is-open");
+  $("#cancelModal").setAttribute("aria-hidden", "true");
+}
+
+async function cancelRequest(confirm) {
+  const res = await fetch("/api/appointments", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customer_phone: $("#cancelPhone").value,
+      cancel_code: $("#cancelCode").value,
+      confirm,
+    }),
+  });
+  return { status: res.status, data: await res.json().catch(() => ({})) };
+}
+
+function showCancelResult(html) {
+  $("#cancelResult").innerHTML = html;
+  $("#cancelResult").hidden = false;
+}
+
+const fmtAppt = (a) => {
+  const [y, m, d] = a.date.split("-");
+  return `<strong>${escapeHtml(a.service_name)}</strong><br>${d}/${m}/${y} às ${escapeHtml(a.time)}`;
+};
+
+async function findAppointmentToCancel() {
+  if ($("#cancelPhone").value.replace(/\D/g, "").length < 10) { showToast("Informe o celular usado na marcação."); return; }
+  if (!$("#cancelCode").value.trim()) { showToast("Informe o código de cancelamento."); return; }
+  $("#cancelConfirmBtn").hidden = true;
+  try {
+    const { status, data } = await cancelRequest(false);
+    if (status === 200) {
+      showCancelResult(fmtAppt(data));
+      $("#cancelFindBtn").hidden = true;
+      $("#cancelConfirmBtn").hidden = false;
+    } else if (status === 409) {
+      showCancelResult(`${fmtAppt(data)}<br><br>Falta menos de 1 hora pro horário — pelo site não dá mais pra cancelar. Fale com a barbearia pelo WhatsApp.`);
+    } else if (status === 404) {
+      showCancelResult("Nenhum agendamento ativo com esse celular e código. Confira os dados.");
+    } else if (status === 429) {
+      showToast("Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.");
+    } else {
+      showToast("Confira o celular e o código.");
+    }
+  } catch {
+    showToast("Falha de conexão. Tente novamente.");
+  }
+}
+
+async function confirmCancel() {
+  $("#cancelConfirmBtn").disabled = true;
+  try {
+    const { status, data } = await cancelRequest(true);
+    if (status === 200) {
+      showCancelResult(`${fmtAppt(data)}<br><br>Agendamento cancelado. O horário foi liberado.`);
+      $("#cancelConfirmBtn").hidden = true;
+      try { localStorage.removeItem("cancelCode"); } catch {}
+      if (state.date) renderTimes();
+    } else if (status === 409) {
+      showCancelResult(`${fmtAppt(data)}<br><br>Falta menos de 1 hora pro horário — fale com a barbearia pelo WhatsApp.`);
+      $("#cancelConfirmBtn").hidden = true;
+    } else {
+      showToast("Não deu pra cancelar. Tente novamente.");
+    }
+  } catch {
+    showToast("Falha de conexão. Tente novamente.");
+  } finally {
+    $("#cancelConfirmBtn").disabled = false;
+  }
 }
 
 /* =========================================================
@@ -575,7 +681,14 @@ async function init() {
   $("#calPrev").addEventListener("click", () => { cal.view.setMonth(cal.view.getMonth() - 1); renderCal(); });
   $("#calNext").addEventListener("click", () => { cal.view.setMonth(cal.view.getMonth() + 1); renderCal(); });
   $$("#calModal [data-close]").forEach((el) => el.addEventListener("click", closeCal));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCal(); closeCancel(); } });
+
+  $("#openCancelBtn").addEventListener("click", () => openCancel());
+  $("#cancelFindBtn").addEventListener("click", findAppointmentToCancel);
+  $("#cancelConfirmBtn").addEventListener("click", confirmCancel);
+  $$("#cancelModal [data-close]").forEach((el) => el.addEventListener("click", closeCancel));
+  const linkCode = new URLSearchParams(location.search).get("cancelar");
+  if (linkCode) openCancel(linkCode);
 }
 
 document.addEventListener("DOMContentLoaded", init);
