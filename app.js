@@ -439,7 +439,11 @@ function showBookingSuccess(name, code) {
 /* =========================================================
    CANCELAMENTO PELO CLIENTE (celular + código)
    ========================================================= */
+let cancelCloseTimer;
 function openCancel(code) {
+  clearInterval(cancelCloseTimer);
+  $("#cancelCloseBtn").hidden = true;
+  $("#cancelCountdown").hidden = true;
   $("#cancelPhone").value = $("#customerPhone").value;
   let saved = null;
   try { saved = localStorage.getItem("cancelCode"); } catch {}
@@ -451,6 +455,7 @@ function openCancel(code) {
   $("#cancelModal").setAttribute("aria-hidden", "false");
 }
 function closeCancel() {
+  clearInterval(cancelCloseTimer);
   $("#cancelModal").classList.remove("is-open");
   $("#cancelModal").setAttribute("aria-hidden", "true");
 }
@@ -502,6 +507,20 @@ async function findAppointmentToCancel() {
   }
 }
 
+/* depois de cancelar: botão Fechar + fecha sozinho em 10s, com a contagem na tela */
+function startCancelCountdown() {
+  let left = 10;
+  const tick = () => { $("#cancelCountdown").textContent = `Fechando em ${left}s`; };
+  tick();
+  $("#cancelCloseBtn").hidden = false;
+  $("#cancelCountdown").hidden = false;
+  cancelCloseTimer = setInterval(() => {
+    left -= 1;
+    if (left <= 0) closeCancel();
+    else tick();
+  }, 1000);
+}
+
 async function confirmCancel() {
   $("#cancelConfirmBtn").disabled = true;
   try {
@@ -511,6 +530,7 @@ async function confirmCancel() {
       $("#cancelConfirmBtn").hidden = true;
       try { localStorage.removeItem("cancelCode"); } catch {}
       if (state.date) renderTimes();
+      startCancelCountdown();
     } else if (status === 409) {
       showCancelResult(`${fmtAppt(data)}<br><br>Falta menos de 1 hora pro horário — fale com a barbearia pelo WhatsApp.`);
       $("#cancelConfirmBtn").hidden = true;
@@ -687,6 +707,7 @@ async function init() {
   $("#openCancelBtn").addEventListener("click", () => openCancel());
   $("#cancelFindBtn").addEventListener("click", findAppointmentToCancel);
   $("#cancelConfirmBtn").addEventListener("click", confirmCancel);
+  $("#cancelCloseBtn").addEventListener("click", closeCancel);
   $$("#cancelModal [data-close]").forEach((el) => el.addEventListener("click", closeCancel));
   const linkCode = new URLSearchParams(location.search).get("cancelar");
   if (linkCode) openCancel(linkCode);

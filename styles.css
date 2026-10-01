@@ -368,6 +368,7 @@ ul, ol { list-style: none; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .cancel__intro { margin: 0 0 16px; text-align: left; }
 #cancelConfirmBtn { margin-top: 14px; }
+.cancel__countdown { margin-top: 12px; text-align: center; font-size: 1rem; font-weight: 700; color: var(--accent); }
 .cancel__result { margin-bottom: 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: .92rem; }
 
 /* ===================== PROFISSIONAIS (seção) ===================== */
