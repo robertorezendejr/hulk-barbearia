@@ -116,6 +116,12 @@ ul, ol { list-style: none; }
   border: 1.5px solid var(--line);
 }
 .btn--ghost:hover { border-color: var(--hulk); color: var(--accent-strong); }
+.btn--danger {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #fff; box-shadow: 0 10px 30px rgba(239, 68, 68, .3);
+}
+.btn--danger:hover { box-shadow: 0 0 0 1px rgba(239,68,68,.5), 0 14px 40px rgba(239,68,68,.4); transform: translateY(-2px); }
+.btn[hidden] { display: none; } /* .btn usa inline-flex, que anularia o atributo hidden */
 
 /* ===================== HEADER ===================== */
 .header {
@@ -361,6 +367,7 @@ ul, ol { list-style: none; }
 .summary__field-hint { font-size: .78rem; color: var(--text-dim); }
 .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .cancel__intro { margin: 0 0 16px; text-align: left; }
+#cancelConfirmBtn { margin-top: 14px; }
 .cancel__result { margin-bottom: 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: .92rem; }
 
 /* ===================== PROFISSIONAIS (seção) ===================== */
@@ -540,7 +547,25 @@ ul, ol { list-style: none; }
   font-size: clamp(1.1rem, 3.5vw, 1.5rem); color: var(--text-dim);
 }
 .booking-success__box { display: grid; gap: 10px; justify-items: center; max-width: 360px; }
-.booking-success__code { font-size: clamp(1.8rem, 8vw, 2.4rem); font-weight: 800; letter-spacing: .2em; color: var(--heading); }
+/* código pisca verde ↔ roxo (as cores do Hulk), com moldura piscando em volta */
+.booking-success__code {
+  font-size: clamp(2.6rem, 13vw, 4rem); font-weight: 800; letter-spacing: .18em;
+  padding: .15em .25em .15em .43em; /* letter-spacing deixa sobra à direita — compensa à esquerda */
+  border: 3px solid; border-radius: var(--radius);
+  animation: code-blink 1.2s ease-in-out infinite alternate;
+}
+@keyframes code-blink {
+  from {
+    color: var(--hulk-bright); border-color: var(--hulk-bright);
+    text-shadow: 0 0 18px rgba(92, 255, 110, .6);
+    box-shadow: 0 0 28px rgba(92, 255, 110, .7), inset 0 0 18px rgba(92, 255, 110, .35);
+  }
+  to {
+    color: #b36bff; border-color: #b36bff;
+    text-shadow: 0 0 18px rgba(179, 107, 255, .6);
+    box-shadow: 0 0 28px rgba(179, 107, 255, .7), inset 0 0 18px rgba(179, 107, 255, .35);
+  }
+}
 .booking-success__box p { color: var(--text-dim); font-size: .92rem; }
 @keyframes booking-success-fade {
   from { opacity: 0; } to { opacity: 1; }

@@ -423,10 +423,11 @@ function showBookingSuccess(name, code) {
     </div>`;
   document.body.appendChild(el);
   el.querySelector("[data-share]").addEventListener("click", async () => {
-    const text = `Hulk Barbearia — código pra cancelar meu horário: ${code}\n${link}`;
+    // link vai separado em `url`: assim o "Copiar" do compartilhar copia só o link, que abre direto no navegador
+    const text = `Hulk Barbearia — código pra cancelar meu horário: ${code}`;
     try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); showToast("Link copiado!"); }
+      if (navigator.share) await navigator.share({ text, url: link });
+      else { await navigator.clipboard.writeText(link); showToast("Link copiado!"); }
     } catch {}
   });
   el.querySelector("[data-done]").addEventListener("click", () => {
