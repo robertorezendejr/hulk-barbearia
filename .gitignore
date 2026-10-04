@@ -25,3 +25,9 @@ texto.md
 WHATSAPP-LEMBRETE.md
 backups/
 MIGRACAO.md
+
+# Backups e chaves (nunca no repo público)
+*.sql
+*.zip
+*.pem
+*.key
