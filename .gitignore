@@ -23,3 +23,5 @@ node_modules
 texto.md
 .env*
 WHATSAPP-LEMBRETE.md
+backups/
+MIGRACAO.md

@@ -5,3 +5,9 @@ docs/
 .DS_Store
 .env
 .env.*
+MIGRACAO.md
+backups
+server.js
+Dockerfile
+.dockerignore
+scripts
