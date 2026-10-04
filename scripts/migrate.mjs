@@ -142,6 +142,15 @@ try {
   if (!String(err.message).includes("duplicate column")) throw err;
 }
 
+// lembretes de WhatsApp: horário (ms) em que a 1ª / 2ª mensagem saiu (ver reminders.js)
+for (const col of ["reminder_1_sent", "reminder_2_sent"]) {
+  try {
+    await db.execute(`ALTER TABLE appointments ADD COLUMN ${col} INTEGER`);
+  } catch (err) {
+    if (!String(err.message).includes("duplicate column")) throw err;
+  }
+}
+
 // promove o admin das variáveis de ambiente pro banco (bootstrap do primeiro admin)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
   await db.execute({

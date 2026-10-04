@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import { runReminders } from "./reminders.js";
 
 const PUBLIC = join(import.meta.dirname, "public");
 const MAX_BODY = 60 * 1024 * 1024; // vídeo de 40MB em base64 dentro do JSON
@@ -78,3 +79,9 @@ createServer(async (req, res) => {
     if (!res.headersSent) res.status(err.code === 413 ? 413 : 500).json({ error: err.code === 413 ? "too_large" : "server_error" });
   }
 }).listen(process.env.PORT || 3000, () => console.log(`ouvindo na porta ${process.env.PORT || 3000}`));
+
+// lembretes de WhatsApp: liga/desliga pela variável, sem deploy de código
+if (process.env.REMINDERS_ENABLED === "1") {
+  setInterval(() => runReminders().catch((err) => console.error("lembretes:", err)), 60e3);
+  console.log("lembretes ligados", process.env.REMINDERS_TEST_PHONE ? `(só ${process.env.REMINDERS_TEST_PHONE})` : "");
+}

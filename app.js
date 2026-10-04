@@ -689,6 +689,10 @@ async function init() {
   $("#mineList").addEventListener("click", onMineClick);
   $("#mineCloseBtn").addEventListener("click", closeMine);
   $$("#mineModal [data-close]").forEach((el) => el.addEventListener("click", closeMine));
+
+  // link do lembrete de WhatsApp: /?meus=<celular> abre "Meus horários" já buscando
+  const meus = new URLSearchParams(location.search).get("meus");
+  if (meus) { $("#customerPhone").value = meus; openMine(); }
 }
 
 document.addEventListener("DOMContentLoaded", init);

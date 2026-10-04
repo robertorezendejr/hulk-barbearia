@@ -11,3 +11,5 @@ server.js
 Dockerfile
 .dockerignore
 scripts
+reminders.js
+reminders.test.mjs

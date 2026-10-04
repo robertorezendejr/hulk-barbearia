@@ -2,7 +2,7 @@ FROM node:24-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
-COPY server.js ./
+COPY server.js reminders.js ./
 COPY api ./api
 COPY scripts ./scripts
 # só o que o navegador pode ver vai pra public/
