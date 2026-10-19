@@ -17,6 +17,14 @@ setInterval(async () => {
 }, 3000);
 </script>`;
 
+// tentativa que falhou deixa a instância "suja": recria limpa ao ligar (menos se já estiver conectada)
+if ((await get(`/instance/connectionState/${INST}`)).instance?.state !== "open") {
+  const h = { apikey: KEY, "content-type": "application/json" };
+  await fetch(`${U}/instance/delete/${INST}`, { method: "DELETE", headers: h });
+  await new Promise((ok) => setTimeout(ok, 3000));
+  await fetch(`${U}/instance/create`, { method: "POST", headers: h, body: JSON.stringify({ instanceName: INST, integration: "WHATSAPP-BAILEYS", qrcode: false, groupsIgnore: true }) });
+}
+
 createServer(async (req, res) => {
   if (req.url !== "/qr") return res.end(page);
   const open = (await get(`/instance/connectionState/${INST}`)).instance?.state === "open";
