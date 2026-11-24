@@ -99,6 +99,14 @@ CREATE TABLE IF NOT EXISTS recurring_appointments (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recurring_slot ON recurring_appointments (pro_id, weekday, time);
 
+-- clientes bloqueados pelo admin: não conseguem agendar pelo site com esse celular
+CREATE TABLE IF NOT EXISTS blocked_customers (
+  phone TEXT PRIMARY KEY, -- mesmo formato de appointments.customer_phone (sem o 55)
+  name TEXT,
+  reason TEXT,
+  created_at INTEGER NOT NULL
+);
+
 -- desmarcação pontual: libera o horário do cliente fixo numa data específica, sem apagar a recorrência
 CREATE TABLE IF NOT EXISTS recurring_exceptions (
   recurring_id INTEGER NOT NULL REFERENCES recurring_appointments(id),

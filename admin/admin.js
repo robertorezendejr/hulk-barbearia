@@ -46,6 +46,7 @@ function showDashboard() {
   loadServices();
   loadHours();
   loadBlocked();
+  loadBlockedCustomers();
   loadAdmins();
 }
 
@@ -165,20 +166,28 @@ const brl = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", curren
 // telefone já pode vir com ou sem o "55" (depende do que o cliente digitou) — 10-11 dígitos = sem DDI, 12-13 = já tem
 const waNumber = (phone) => (phone.length >= 12 ? phone : `55${phone}`);
 
+// (22) 99999-9999 — só pra exibir
+const fmtPhone = (p) => p.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
+
 async function loadAppointments() {
-  const list = await api("/api/admin/appointments");
+  const [list, { customers }] = await Promise.all([api("/api/admin/appointments"), api("/api/admin/blocked")]);
+  const blockedPhones = new Set(customers.map((c) => c.phone));
   $("#appointmentsBody").innerHTML = list.length
     ? list.map((a) => {
         const [y, m, d] = a.date.split("-");
+        const isBlocked = blockedPhones.has(a.customer_phone);
         return `
-      <tr data-id="${a.id}">
+      <tr data-id="${a.id}" data-phone="${escapeHtml(a.customer_phone)}" data-name="${escapeHtml(a.customer_name)}">
         <td>${d}/${m}/${y}</td>
         <td>${escapeHtml(a.time)}</td>
-        <td>${escapeHtml(a.customer_name)}</td>
+        <td>${isBlocked ? `<span class="badge-blocked">🚫 Bloqueado</span>` : ""}${escapeHtml(a.customer_name)}</td>
         <td><a href="https://wa.me/${waNumber(a.customer_phone)}" target="_blank" rel="noopener">${escapeHtml(a.customer_phone)}</a></td>
         <td>${escapeHtml(a.service_name)}</td>
         <td>${brl(a.price)}</td>
-        <td><button class="btn btn--ghost js-cancel">Cancelar</button></td>
+        <td>
+          <button class="btn btn--ghost js-cancel">Cancelar</button>
+          ${isBlocked ? "" : `<button class="btn btn--ghost btn--danger-ghost js-block-customer">🚫 Bloquear</button>`}
+        </td>
       </tr>`;
       }).join("")
     : `<tr><td colspan="7">Nenhum agendamento futuro.</td></tr>`;
@@ -189,6 +198,13 @@ async function loadAppointments() {
       await api("/api/admin/appointments", { method: "PUT", body: { id, status: "cancelled" } });
       loadAppointments();
       showToast("Agendamento cancelado.");
+    });
+  });
+
+  $$("#appointmentsBody .js-block-customer").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tr = btn.closest("tr");
+      blockCustomer({ phone: tr.dataset.phone, name: tr.dataset.name });
     });
   });
 }
@@ -469,6 +485,57 @@ $("#blockSlotForm").addEventListener("submit", async (e) => {
   } catch {
     showToast("Não deu pra bloquear esse horário.");
   }
+});
+
+/* ---------- Clientes bloqueados ---------- */
+async function blockCustomer({ phone, name, reason }) {
+  const digits = String(phone || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+  if (!/^\d{10,11}$/.test(digits)) { showToast("Informe um WhatsApp válido com DDD."); return false; }
+  const who = name ? `${name} (${fmtPhone(digits)})` : fmtPhone(digits);
+  if (!confirm(`Bloquear ${who}?\n\nEsse cliente não vai mais conseguir agendar pelo site.`)) return false;
+  try {
+    await api("/api/admin/blocked", { method: "POST", body: { phone: digits, name, reason } });
+    loadBlockedCustomers();
+    loadAppointments();
+    showToast("Cliente bloqueado.");
+    return true;
+  } catch {
+    showToast("Não deu pra bloquear esse cliente.");
+    return false;
+  }
+}
+
+async function loadBlockedCustomers() {
+  const { customers } = await api("/api/admin/blocked");
+  $("#blockedCustomersList").innerHTML = customers.length
+    ? customers.map((c) => `
+      <li data-phone="${escapeHtml(c.phone)}">
+        <span>
+          <span class="badge-blocked">🚫 Bloqueado</span>
+          <strong>${escapeHtml(fmtPhone(c.phone))}</strong>${c.name ? ` · ${escapeHtml(c.name)}` : ""}
+          <span class="admin-list__reason">${c.reason ? ` · ${escapeHtml(c.reason)}` : ""} · desde ${new Date(Number(c.created_at)).toLocaleDateString("pt-BR")}</span>
+        </span>
+        <button class="btn btn--ghost js-unblock-customer">Desbloquear</button>
+      </li>`).join("")
+    : `<li><span class="admin-list__reason">Nenhum cliente bloqueado.</span></li>`;
+
+  $$("#blockedCustomersList .js-unblock-customer").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const phone = btn.closest("li").dataset.phone;
+      if (!confirm(`Desbloquear ${fmtPhone(phone)}? Ele volta a poder agendar pelo site.`)) return;
+      await api("/api/admin/blocked", { method: "DELETE", body: { phone } });
+      loadBlockedCustomers();
+      loadAppointments();
+      showToast("Cliente desbloqueado.");
+    });
+  });
+}
+
+$("#blockCustomerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const ok = await blockCustomer({ phone: form.get("phone"), name: form.get("name").trim(), reason: form.get("reason").trim() });
+  if (ok) e.target.reset();
 });
 
 /* ---------- Administradores ---------- */

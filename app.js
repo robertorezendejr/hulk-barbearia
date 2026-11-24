@@ -386,6 +386,10 @@ async function confirmBooking() {
       showToast("Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.");
       return;
     }
+    if (res.status === 403) {
+      showToast("Não foi possível agendar. Fale com a barbearia pelo WhatsApp.");
+      return;
+    }
     if (!res.ok) {
       showToast("Não deu pra confirmar o agendamento. Tente novamente.");
       return;

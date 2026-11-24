@@ -251,6 +251,31 @@
         <ul id="blockedSlotsList" class="admin-list"></ul>
       </section>
 
+      <section class="admin-card admin-card--danger">
+        <h2 class="admin-card__title">🚫 Clientes bloqueados</h2>
+        <p class="admin-hint">
+          O cliente bloqueado <strong>não consegue agendar pelo site</strong> com esse WhatsApp.
+          Os horários que ele já marcou continuam na agenda (cancele em "Agendamentos" se precisar).
+          Dá pra bloquear aqui ou pelo botão <strong>Bloquear</strong> na lista de agendamentos.
+        </p>
+        <form id="blockCustomerForm" class="admin-form admin-form--row">
+          <label class="admin-field">
+            <span>WhatsApp (com DDD)</span>
+            <input type="tel" name="phone" placeholder="(22) 99999-9999" required inputmode="numeric" />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Nome (opcional)</span>
+            <input type="text" name="name" maxlength="80" />
+          </label>
+          <label class="admin-field admin-field--grow">
+            <span>Motivo (opcional)</span>
+            <input type="text" name="reason" maxlength="120" placeholder="Ex: faltou 3 vezes sem avisar" />
+          </label>
+          <button type="submit" class="btn btn--danger">🚫 Bloquear cliente</button>
+        </form>
+        <ul id="blockedCustomersList" class="admin-list"></ul>
+      </section>
+
       <section class="admin-card">
         <h2 class="admin-card__title">Administradores</h2>
         <form id="adminForm" class="admin-form admin-form--row">

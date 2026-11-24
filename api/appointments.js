@@ -38,7 +38,7 @@ async function tooManyAttempts(req, bucket = "", max = MAX_ATTEMPTS) {
   return false;
 }
 
-const normalizePhone = (raw) => {
+export const normalizePhone = (raw) => {
   const phone = String(raw || "").replace(/\D/g, "");
   return phone.length >= 12 ? phone.slice(-11) : phone; // remove o "55" se o cliente digitou com DDI
 };
@@ -80,6 +80,9 @@ export default async function handler(req, res) {
     if (!name) return res.status(400).json({ error: "invalid_name" });
     if (!PHONE_RE.test(phone)) return res.status(400).json({ error: "invalid_phone" });
     if (!VALID_PRO_IDS.has(pro_id)) return res.status(400).json({ error: "invalid_pro" });
+
+    const isBlocked = await db().execute({ sql: `SELECT 1 FROM blocked_customers WHERE phone = ?`, args: [phone] });
+    if (isBlocked.rows.length) return res.status(403).json({ error: "blocked" });
 
     const service = await db().execute({
       sql: `SELECT id, name, duration_min FROM services WHERE id = ? AND active = 1`,
