@@ -67,7 +67,7 @@ $("#loginForm").addEventListener("submit", async (e) => {
     showDashboard();
   } catch (err) {
     errEl.textContent = err.message === "too_many_attempts"
-      ? "Muitas tentativas erradas. Essa conta fica bloqueada por 24 horas."
+      ? "Muitas tentativas erradas. Essa conta fica bloqueada por 6 horas."
       : "E-mail ou senha incorretos.";
     errEl.hidden = false;
   }

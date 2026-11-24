@@ -2,7 +2,7 @@ import { checkCredentials, createSession, destroySession, isAuthed } from "../_a
 import { db } from "../_db.js";
 import { sendEmail } from "../_email.js";
 
-const WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const WINDOW_MS = 6 * 60 * 60 * 1000; // 6h
 const MAX_ATTEMPTS = 5;
 
 function clientIp(req) {
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
           await sendEmail({
             to,
             subject: "Alerta de segurança — Hulk Barbearia",
-            text: `A conta ${email} teve 5 tentativas de login erradas e ficou bloqueada por 24 horas.\n\nSe não foi você, considere trocar a senha assim que possível.`,
+            text: `A conta ${email} teve 5 tentativas de login erradas e ficou bloqueada por 6 horas.\n\nSe não foi você, considere trocar a senha assim que possível.`,
           });
         }
       }
